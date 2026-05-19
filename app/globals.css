@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Palette — academic, warm, WCAG AA */
+  --color-ink:       #1c1a18;   /* near-black body text */
+  --color-parchment: #f5f0e8;   /* warm cream page bg */
+  --color-paper:     #ffffff;   /* card / panel bg */
+  --color-header-bg: #1e2d40;   /* deep navy site header */
+  --color-header-fg: #f0ebe0;   /* header text */
+  --color-crimson:   #7a1f1f;   /* primary accent */
+  --color-crimson-hover: #5e1717;
+  --color-border:    #d4c5a9;   /* warm dividers */
+  --color-muted:     #6b5f4e;   /* secondary text */
+  --color-focus:     #1d5f9e;   /* keyboard focus ring */
+  --color-tag-bg:    #e8e0d0;   /* chip / tag background */
+  --color-tag-fg:    #3d3325;   /* chip / tag text */
+
+  /* Typography */
+  --font-sans: var(--font-geist-sans), Georgia, serif;
+  --font-mono: var(--font-geist-mono), 'Courier New', monospace;
+  --font-serif: Georgia, 'Times New Roman', serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ───────────────────────────────────────────────────────────────── */
+
+:root {
+  --background: var(--color-parchment);
+  --foreground: var(--color-ink);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+
+/* ── Skip nav ───────────────────────────────────────────────────────────── */
+
+.skip-nav {
+  position: absolute;
+  top: -9999px;
+  left: 0;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--color-crimson);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+.skip-nav:focus {
+  top: 0;
+}
+
+/* ── Focus ──────────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── Links ──────────────────────────────────────────────────────────────── */
+
+a {
+  color: var(--color-crimson);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+a:hover {
+  color: var(--color-crimson-hover);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+header a {
+  color: var(--color-header-fg);
+  text-decoration: none;
+}
+header a:hover {
+  color: var(--color-header-fg);
+}
+
+/* ── Form elements ──────────────────────────────────────────────────────── */
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* ── Custom utilities ───────────────────────────────────────────────────── */
+
+@utility scheme-light {
+  color-scheme: light;
 }
