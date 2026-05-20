@@ -309,6 +309,93 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
   }
 }
 
+// ── Timeline distribution queries ─────────────────────────────────────────
+
+/** All public document dates — used as the grey context layer in the timeline chart. */
+export async function getArchiveDates(): Promise<(string | null)[]> {
+  const { data } = await supabase
+    .from('documents')
+    .select('date')
+    .eq('visibility', 'public')
+  return (data ?? []).map((d) => (d as { date: string | null }).date)
+}
+
+/**
+ * Dates for documents matching the supplied filters — used as the crimson
+ * foreground layer.  Mirrors the filter logic in searchDocuments but selects
+ * only the date column and applies no pagination.
+ */
+export async function searchDocumentDates(
+  params: Omit<SearchParams, 'page'>,
+): Promise<(string | null)[]> {
+  let query = supabase
+    .from('documents')
+    .select('date')
+    .eq('visibility', 'public')
+
+  if (params.q?.trim()) {
+    query = query.textSearch('fts', params.q.trim(), { type: 'websearch', config: 'english' })
+  }
+  if (params.date_from) query = query.gte('date', params.date_from)
+  if (params.date_to)   query = query.lte('date', params.date_to)
+
+  for (const field of MULTISELECT_FILTER_FIELDS) {
+    const values = params.filters?.[field.paramKey!] ?? []
+    if (values.length > 0) query = query.overlaps(field.key, values)
+  }
+
+  const { data } = await query
+  return (data ?? []).map((d) => (d as { date: string | null }).date)
+}
+
+// ── Map pin types and query ────────────────────────────────────────────────
+
+export interface MapPin {
+  location: string
+  lat: number
+  lng: number
+  documents: Array<{ id: number; title: string | null; date: string | null }>
+}
+
+export async function getMapPins(): Promise<MapPin[]> {
+  const [geocodesRes, docsRes] = await Promise.allSettled([
+    supabase
+      .from('geocode_cache')
+      .select('location, lat, lng')
+      .not('lat', 'is', null),
+
+    supabase
+      .from('documents')
+      .select('id, title, date, locations_mentioned')
+      .eq('visibility', 'public')
+      .not('locations_mentioned', 'is', null),
+  ])
+
+  if (geocodesRes.status === 'rejected' || docsRes.status === 'rejected') return []
+
+  const geocodes = (geocodesRes.value.data ?? []) as {
+    location: string; lat: number; lng: number
+  }[]
+  const docs = (docsRes.value.data ?? []) as {
+    id: number; title: string | null; date: string | null; locations_mentioned: string[]
+  }[]
+
+  const pinMap = new Map<string, MapPin>()
+  for (const g of geocodes) {
+    pinMap.set(g.location, { location: g.location, lat: g.lat, lng: g.lng, documents: [] })
+  }
+  for (const doc of docs) {
+    for (const loc of doc.locations_mentioned ?? []) {
+      const pin = pinMap.get(loc)
+      if (pin) pin.documents.push({ id: doc.id, title: doc.title, date: doc.date })
+    }
+  }
+
+  return Array.from(pinMap.values())
+    .filter((p) => p.documents.length > 0)
+    .sort((a, b) => a.location.localeCompare(b.location))
+}
+
 // ── Person detail queries ──────────────────────────────────────────────────
 
 export async function getPerson(id: number): Promise<Record<string, unknown> | null> {
