@@ -50,6 +50,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     Search Records
                   </Link>
                 </li>
+                <li>
+                  <Link href="/map" className="hover:opacity-75 transition-opacity">
+                    Map
+                  </Link>
+                </li>
               </ul>
             </nav>
           </div>
