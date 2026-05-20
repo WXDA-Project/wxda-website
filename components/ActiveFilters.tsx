@@ -52,14 +52,17 @@ export default function ActiveFilters({ multiselectFields }: ActiveFiltersProps)
       next.delete(pill.removeKey)
     }
     router.push(`/search${next.toString() ? `?${next}` : ''}`)
+    // router.refresh() ensures the server component re-fetches even when the
+    // router navigates within the same pathname (same-route param change).
+    router.refresh()
   }
 
   return (
     <div className="flex flex-wrap gap-2 mb-4" aria-label="Active filters">
       <span className="text-xs font-semibold self-center text-muted">Active:</span>
-      {pills.map((pill, i) => (
+      {pills.map((pill) => (
         <button
-          key={i}
+          key={`${pill.removeKey}:${pill.removeValue ?? ''}`}
           type="button"
           onClick={() => removePill(pill)}
           className="flex items-center gap-1 text-xs rounded-full px-3 py-1 transition-opacity hover:opacity-75 max-w-[200px] sm:max-w-none bg-tag-bg text-tag-fg cursor-pointer"
