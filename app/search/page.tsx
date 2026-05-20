@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import {
   searchDocuments,
+  searchDocumentDates,
+  getArchiveDates,
   searchPersons,
   personDisplayName,
   PAGE_SIZE,
@@ -19,6 +21,7 @@ import SearchFilters from '@/components/SearchFilters'
 import Pagination from '@/components/Pagination'
 import TabNav from '@/components/TabNav'
 import ActiveFilters from '@/components/ActiveFilters'
+import TimelineChart from '@/components/TimelineChart'
 
 export const metadata: Metadata = { title: 'Search the Archive' }
 
@@ -207,7 +210,11 @@ export default async function SearchPage({
       if (vals.length > 0) filters[field.paramKey!] = vals
     }
 
-    const result = await searchDocuments({ q, date_from, date_to, filters, page })
+    const [result, archiveDates, filteredDates] = await Promise.all([
+      searchDocuments({ q, date_from, date_to, filters, page }),
+      getArchiveDates(),
+      searchDocumentDates({ q, date_from, date_to, filters }),
+    ])
     const firstResult = (page - 1) * PAGE_SIZE + 1
     const lastResult = Math.min(page * PAGE_SIZE, result.total)
 
@@ -231,6 +238,7 @@ export default async function SearchPage({
                 <>Showing <strong className="text-ink">{firstResult}–{lastResult}</strong> of <strong className="text-ink">{result.total.toLocaleString()}</strong> record{result.total !== 1 ? 's' : ''}</>
               )}
             </p>
+            <TimelineChart archiveDates={archiveDates} filteredDates={filteredDates} />
             <RecordResultsTable records={result.records} />
             <Suspense>
               <Pagination currentPage={result.page} totalPages={result.totalPages} />
