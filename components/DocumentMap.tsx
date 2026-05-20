@@ -116,7 +116,7 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
             className: '',
             iconSize: [outer, outer],
             iconAnchor: [outer / 2, outer / 2],
-            html: `<div style="width:${outer}px;height:${outer}px;background:rgba(122,31,31,0.18);border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:${inner}px;height:${inner}px;background:#7a1f1f;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:${fontSize}px;font-family:Georgia,'Times New Roman',serif;">${count}</div></div>`,
+            html: `<div aria-label="${count} records" style="width:${outer}px;height:${outer}px;background:rgba(122,31,31,0.18);border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:${inner}px;height:${inner}px;background:#7a1f1f;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:${fontSize}px;font-family:Georgia,'Times New Roman',serif;">${count}</div></div>`,
           })
         },
       })
@@ -132,7 +132,11 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
       })
 
       for (const pin of pins) {
-        L.marker([pin.lat, pin.lng], { icon: markerIcon })
+        const count = pin.documents.length
+        L.marker([pin.lat, pin.lng], {
+          icon: markerIcon,
+          title: `${pin.location} – ${count} record${count !== 1 ? 's' : ''}`,
+        })
           .on('click', () => setSelectedPin(pin))
           .addTo(clusterGroup)
       }
