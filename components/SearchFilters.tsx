@@ -207,11 +207,17 @@ interface SearchFiltersProps {
    * Omit for the records tab (default). Pass 'persons' for the persons tab.
    */
   tab?: string
+  /**
+   * Distinct option values for every multiselect filter, keyed by paramKey.
+   * Fetched server-side from the database and passed as a prop.
+   */
+  filterOptions: Record<string, string[]>
 }
 
 export default function SearchFilters({
   filterFields = FILTER_FIELDS,
   tab,
+  filterOptions,
 }: SearchFiltersProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -326,7 +332,7 @@ export default function SearchFilters({
             key={field.key}
             label={field.label}
             paramKey={field.paramKey!}
-            options={field.filterOptions!}
+            options={filterOptions[field.paramKey!] ?? []}
             selected={draft.multiselects[field.paramKey!] ?? []}
             onChange={handleMultiselect}
           />
