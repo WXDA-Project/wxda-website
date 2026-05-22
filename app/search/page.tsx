@@ -5,7 +5,9 @@ import {
   searchDocuments,
   searchDocumentDates,
   getArchiveDates,
+  getDocumentFilterOptions,
   searchPersons,
+  getPersonFilterOptions,
   personDisplayName,
   PAGE_SIZE,
   type PersonRow,
@@ -210,10 +212,11 @@ export default async function SearchPage({
       if (vals.length > 0) filters[field.paramKey!] = vals
     }
 
-    const [result, archiveDates, filteredDates] = await Promise.all([
+    const [result, archiveDates, filteredDates, filterOptions] = await Promise.all([
       searchDocuments({ q, date_from, date_to, filters, page }),
       getArchiveDates(),
       searchDocumentDates({ q, date_from, date_to, filters }),
+      getDocumentFilterOptions(),
     ])
     const firstResult = (page - 1) * PAGE_SIZE + 1
     const lastResult = Math.min(page * PAGE_SIZE, result.total)
@@ -228,7 +231,7 @@ export default async function SearchPage({
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           <div className="w-full lg:w-64 shrink-0">
             <Suspense>
-              <SearchFilters filterFields={FILTER_FIELDS} />
+              <SearchFilters filterFields={FILTER_FIELDS} filterOptions={filterOptions} />
             </Suspense>
           </div>
           <div className="flex-1 min-w-0">
@@ -256,7 +259,10 @@ export default async function SearchPage({
     if (vals.length > 0) filters[field.paramKey!] = vals
   }
 
-  const result = await searchPersons({ q, filters, page })
+  const [result, filterOptions] = await Promise.all([
+    searchPersons({ q, filters, page }),
+    getPersonFilterOptions(),
+  ])
   const firstResult = (page - 1) * PAGE_SIZE + 1
   const lastResult = Math.min(page * PAGE_SIZE, result.total)
 
@@ -270,7 +276,7 @@ export default async function SearchPage({
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
         <div className="w-full lg:w-64 shrink-0">
           <Suspense>
-            <SearchFilters filterFields={PERSON_FILTER_FIELDS} tab="persons" />
+            <SearchFilters filterFields={PERSON_FILTER_FIELDS} tab="persons" filterOptions={filterOptions} />
           </Suspense>
         </div>
         <div className="flex-1 min-w-0">
