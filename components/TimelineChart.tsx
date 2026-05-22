@@ -1,8 +1,10 @@
 // Pure server component — renders an SVG, no client JS.
 
-const MIN_YEAR = 1785
-const MAX_YEAR = 1848
-const YEARS    = MAX_YEAR - MIN_YEAR + 1   // 64
+import { DATE_FILTER_FIELD } from '@/lib/field-config'
+
+const MIN_YEAR = parseInt(DATE_FILTER_FIELD.minDate!.slice(0, 4), 10)
+const MAX_YEAR = parseInt(DATE_FILTER_FIELD.maxDate!.slice(0, 4), 10)
+const YEARS    = MAX_YEAR - MIN_YEAR + 1
 
 const SVG_W   = 600
 const CHART_H = 60   // bar area (SVG units)
@@ -28,11 +30,11 @@ interface Props {
 }
 
 const AXIS_TICKS: Array<{ year: number; anchor: 'start' | 'middle' | 'end' }> = [
-  { year: 1785, anchor: 'start'  },
-  { year: 1800, anchor: 'middle' },
-  { year: 1820, anchor: 'middle' },
-  { year: 1840, anchor: 'middle' },
-  { year: 1848, anchor: 'end'    },
+  { year: MIN_YEAR, anchor: 'start'  },
+  { year: 1800,     anchor: 'middle' },
+  { year: 1820,     anchor: 'middle' },
+  { year: 1840,     anchor: 'middle' },
+  { year: MAX_YEAR, anchor: 'end'    },
 ]
 
 export default function TimelineChart({ archiveDates, filteredDates }: Props) {

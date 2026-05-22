@@ -9,16 +9,44 @@
 
 export type FilterType = 'text' | 'date-range' | 'multiselect'
 
+/**
+ * Semantic role for fields that are referenced by code outside the generic
+ * config-driven loops (e.g. the map, enrichment queries, person badges).
+ * Adding a role lets downstream code import a stable constant instead of a
+ * raw string, so renaming a column only requires changing `key` here.
+ */
+export type FieldRole =
+  | 'primary-date'   // documents: main date column (ORDER BY, date-range filter)
+  | 'location'       // documents: array of location mentions (used by the map)
+  | 'author-ref'     // documents: FK array of author person IDs
+  | 'container-ref'  // documents: FK ID of the containing publication
+  | 'citation'       // documents: cite-as attribution string
+  | 'source-url'     // documents: original source URL
+  | 'person-sort'    // persons: default ORDER BY column
+  | 'person-badge'   // persons: displayed as a badge chip on the person page
+
 export interface FieldConfig {
-  /** Column name in the `documents` Supabase table */
+  /** Column name in the `documents` (or `persons`) Supabase table */
   key: string
   /** Human-readable label shown on the website */
   label: string
+  /** Semantic role — lets code import a stable constant rather than a raw string */
+  role?: FieldRole
   /**
    * Filter UI type to show in the search filter panel.
    * Omit (undefined) for fields that are display-only.
    */
   filterType?: FilterType
+  /**
+   * For `date-range` filters: earliest selectable date (ISO string).
+   * Drives the `min` attribute on the date input and the timeline chart bounds.
+   */
+  minDate?: string
+  /**
+   * For `date-range` filters: latest selectable date (ISO string).
+   * Drives the `max` attribute on the date input and the timeline chart bounds.
+   */
+  maxDate?: string
   /**
    * For `multiselect` filters: the list of available options.
    * Sourced from the distinct values that appear in the database.
@@ -55,6 +83,17 @@ export interface FieldConfig {
    * Enriched fields are skipped in the generic key-value detail list.
    */
   enriched?: boolean
+  /**
+   * Include this field in the compact document summary SELECT used when
+   * listing a person's mentioned/authored documents on the person detail page.
+   */
+  showInDocSummary?: boolean
+  /**
+   * Include this field in the person enrichment SELECT used when fetching
+   * person records referenced from documents (authors, mentioned persons).
+   * Only meaningful on fields in person-field-config.ts.
+   */
+  showInEnrichment?: boolean
 }
 
 export const FIELDS: FieldConfig[] = [
@@ -62,11 +101,15 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'date',
     label: 'Date',
+    role: 'primary-date',
     filterType: 'date-range',
     paramKey: 'date',
+    minDate: '1785-01-01',
+    maxDate: '1848-12-31',
     format: 'date',
     showInTable: true,
     showInDetail: true,
+    showInDocSummary: true,
   },
   {
     key: 'short_summary',
@@ -75,10 +118,12 @@ export const FIELDS: FieldConfig[] = [
     showInDetail: true,
     enriched: true,
     maxTableLength: 140,
+    showInDocSummary: true,
   },
   {
     key: 'provisional_category',
     label: 'Category',
+    showInDocSummary: true,
     filterType: 'multiselect',
     paramKey: 'category',
     filterOptions: [
@@ -124,6 +169,7 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'locations_mentioned',
     label: 'Locations',
+    role: 'location',
     showInTable: true,
     showInDetail: true,
     isArray: true,
@@ -297,6 +343,7 @@ export const FIELDS: FieldConfig[] = [
     showInTable: false,
     showInDetail: true,
     enriched: true,
+    showInDocSummary: true,
   },
   {
     key: 'name_title',
@@ -304,6 +351,7 @@ export const FIELDS: FieldConfig[] = [
     showInTable: false,
     showInDetail: true,
     enriched: true,
+    showInDocSummary: true,
   },
   {
     key: 'source',
@@ -314,6 +362,7 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'container',
     label: 'Publication / Container',
+    role: 'container-ref',
     showInTable: false,
     showInDetail: true,
     enriched: true,
@@ -321,6 +370,7 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'author_or_creator',
     label: 'Author / Creator',
+    role: 'author-ref',
     showInTable: false,
     showInDetail: true,
     isArray: true,
@@ -467,11 +517,27 @@ export const FIELDS: FieldConfig[] = [
     showInDetail: true,
     isArray: true,
   },
+
+  // ── Citation / source fields (custom rendering in record footer) ──────────
+  {
+    key: 'cite_as',
+    label: 'Cite as',
+    role: 'citation',
+    showInTable: false,
+    showInDetail: false,
+  },
+  {
+    key: 'url',
+    label: 'Source URL',
+    role: 'source-url',
+    showInTable: false,
+    showInDetail: false,
+  },
 ]
 
 // De-duplicate by key (crossdressing_occupation appears in both filter and detail sections)
 const seen = new Set<string>()
-const UNIQUE_FIELDS = FIELDS.filter((f) => {
+export const UNIQUE_FIELDS = FIELDS.filter((f) => {
   if (seen.has(f.key)) return false
   seen.add(f.key)
   return true
@@ -499,3 +565,32 @@ export const FIELD_MAP = Object.fromEntries(UNIQUE_FIELDS.map((f) => [f.key, f])
  * record detail page and therefore skipped in the generic key-value detail list.
  */
 export const ENRICHED_KEYS = new Set(UNIQUE_FIELDS.filter((f) => f.enriched).map((f) => f.key))
+
+// ── System column names (internal DB structure, not user-facing fields) ────
+
+/** tsvector column used for full-text search */
+export const FTS_COLUMN = 'fts' as const
+/** Row-visibility gate; only rows with 'public' are served to the public site */
+export const VISIBILITY_COLUMN = 'visibility' as const
+
+// ── Semantic field lookups via role ────────────────────────────────────────
+// Downstream code imports these constants instead of raw strings, so renaming
+// a column only requires updating `key` in the field entry above.
+
+/** Config entry for the primary date field (drives ORDER BY and date-range filter) */
+export const DATE_FILTER_FIELD   = UNIQUE_FIELDS.find((f) => f.role === 'primary-date')!
+/** Column key used for document ordering and date-range queries */
+export const SORT_DATE_KEY       = DATE_FILTER_FIELD.key
+/** Column key for the location-mentions array (used by the map feature) */
+export const LOCATION_FIELD_KEY  = UNIQUE_FIELDS.find((f) => f.role === 'location')!.key
+/** Column key for the author/creator FK array */
+export const AUTHOR_FIELD_KEY    = UNIQUE_FIELDS.find((f) => f.role === 'author-ref')!.key
+/** Column key for the container/publication FK */
+export const CONTAINER_FIELD_KEY = UNIQUE_FIELDS.find((f) => f.role === 'container-ref')!.key
+/** Column key for the cite-as attribution string */
+export const CITE_AS_KEY         = UNIQUE_FIELDS.find((f) => f.role === 'citation')!.key
+/** Column key for the original source URL */
+export const SOURCE_URL_KEY      = UNIQUE_FIELDS.find((f) => f.role === 'source-url')!.key
+
+/** Compact SELECT column list for document summaries (person detail page document lists) */
+export const DOC_SUMMARY_COLUMNS = ['id', ...UNIQUE_FIELDS.filter((f) => f.showInDocSummary).map((f) => f.key)].join(', ')

@@ -1,6 +1,21 @@
 import { supabase } from './supabase'
-import { FIELDS, TABLE_FIELDS, MULTISELECT_FILTER_FIELDS } from './field-config'
-import { PERSON_TABLE_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS } from './person-field-config'
+import {
+  UNIQUE_FIELDS,
+  TABLE_FIELDS,
+  MULTISELECT_FILTER_FIELDS,
+  FTS_COLUMN,
+  VISIBILITY_COLUMN,
+  SORT_DATE_KEY,
+  LOCATION_FIELD_KEY,
+  AUTHOR_FIELD_KEY,
+  DOC_SUMMARY_COLUMNS,
+} from './field-config'
+import {
+  PERSON_TABLE_FIELDS,
+  PERSON_MULTISELECT_FILTER_FIELDS,
+  PERSON_SORT_KEY,
+  PERSON_ENRICHMENT_COLUMNS,
+} from './person-field-config'
 
 export const PAGE_SIZE = 20
 
@@ -22,18 +37,18 @@ export interface SearchParams {
   page?: number
 }
 
-// ── Column sets ────────────────────────────────────────────────────────────
+// ── Column sets (all derived from config — no hardcoded column names) ──────
 
-const ALL_DOC_COLUMNS =
-  FIELDS.map((f) => f.key).join(', ') + ', id, visibility, cite_as, url'
+// All document columns: every field key + the two system columns
+const ALL_DOC_COLUMNS = [...UNIQUE_FIELDS.map((f) => f.key), 'id', VISIBILITY_COLUMN].join(', ')
 
-// Derived from TABLE_FIELDS so adding showInTable:true in the config is enough
-const TABLE_COLUMNS = [...new Set(['id', 'title', ...TABLE_FIELDS.map((f) => f.key)])].join(', ')
+// Table query columns: id + all showInTable fields (title included via showInDocSummary isn't needed here — title is already in TABLE_FIELDS via enriched fields)
+const TABLE_COLUMNS = [...new Set(['id', ...TABLE_FIELDS.map((f) => f.key)])].join(', ')
 
-const DOC_SUMMARY_COLUMNS = 'id, title, name_title, date, short_summary, provisional_category'
+// DOC_SUMMARY_COLUMNS and PERSON_ENRICHMENT_COLUMNS are imported from the config files
 
-const PERSON_COLUMNS =
-  'id, title, given_names, name_title, person_type, presumptive_sex, social_rank, short_summary'
+// PERSON_SEARCH_COLUMNS: enrichment fields cover all fields needed for display name + table columns
+const PERSON_SEARCH_COLUMNS = [...new Set(['id', ...PERSON_ENRICHMENT_COLUMNS.split(', '), ...PERSON_TABLE_FIELDS.map((f) => f.key)])].join(', ')
 
 // ── Document types ─────────────────────────────────────────────────────────
 
@@ -104,14 +119,14 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
   let query = supabase
     .from('documents')
     .select(TABLE_COLUMNS, { count: 'exact' })
-    .eq('visibility', 'public')
+    .eq(VISIBILITY_COLUMN, 'public')
 
   if (params.q?.trim()) {
-    query = query.textSearch('fts', params.q.trim(), { type: 'websearch', config: 'english' })
+    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
   }
 
-  if (params.date_from) query = query.gte('date', params.date_from)
-  if (params.date_to)   query = query.lte('date', params.date_to)
+  if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
+  if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
 
   // Apply all multiselect filters generically from the field config.
   // To add a new filter, add it to FIELDS in field-config.ts — nothing else needed here.
@@ -120,7 +135,7 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     if (values.length > 0) query = query.overlaps(field.key, values)
   }
 
-  query = query.order('date', { ascending: true, nullsFirst: false }).range(from, to)
+  query = query.order(SORT_DATE_KEY, { ascending: true, nullsFirst: false }).range(from, to)
 
   const { data, count, error } = await query
   if (error) throw new Error(error.message)
@@ -140,7 +155,7 @@ export async function getDocument(id: number): Promise<Record<string, unknown> |
     .from('documents')
     .select(ALL_DOC_COLUMNS)
     .eq('id', id)
-    .eq('visibility', 'public')
+    .eq(VISIBILITY_COLUMN, 'public')
     .single()
 
   if (error) return null
@@ -165,7 +180,7 @@ export async function getDocumentEnrichment(
   // Fetch all three in parallel
   const [authorsRes, containerRes, relsRes] = await Promise.allSettled([
     numericAuthorIds.length > 0
-      ? supabase.from('persons').select(PERSON_COLUMNS).in('id', numericAuthorIds)
+      ? supabase.from('persons').select(PERSON_ENRICHMENT_COLUMNS).in('id', numericAuthorIds)
       : Promise.resolve({ data: [] as PersonSummary[], error: null }),
 
     numericContainerId
@@ -212,12 +227,12 @@ export async function getDocumentEnrichment(
     if (personIds.length > 0) {
       const { data: persons } = await supabase
         .from('persons')
-        .select(PERSON_COLUMNS)
+        .select(PERSON_ENRICHMENT_COLUMNS)
         .in('id', personIds)
 
       if (persons) {
         const byId = new Map(
-          (persons as PersonSummary[]).map((p) => [p.id, p]),
+          (persons as unknown as PersonSummary[]).map((p) => [p.id, p]),
         )
         mentionedPersons = rels
           .map((r) => {
@@ -234,10 +249,6 @@ export async function getDocumentEnrichment(
 
 // ── Person search ──────────────────────────────────────────────────────────
 
-// Derived from PERSON_TABLE_FIELDS — adding showInTable:true in person-field-config is enough
-const PERSON_SEARCH_COLUMNS = [
-  ...new Set(['id', 'title', 'given_names', 'name_title', ...PERSON_TABLE_FIELDS.map((f) => f.key)]),
-].join(', ')
 
 export interface PersonSearchParams {
   q?: string
@@ -277,10 +288,10 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
   let query = supabase
     .from('persons')
     .select(PERSON_SEARCH_COLUMNS, { count: 'exact' })
-    .eq('visibility', 'public')
+    .eq(VISIBILITY_COLUMN, 'public')
 
   if (params.q?.trim()) {
-    query = query.textSearch('fts', params.q.trim(), { type: 'websearch', config: 'english' })
+    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
   }
 
   // Apply multiselect filters generically from person-field-config.
@@ -294,7 +305,7 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
     }
   }
 
-  query = query.order('given_names', { ascending: true, nullsFirst: false }).range(from, to)
+  query = query.order(PERSON_SORT_KEY, { ascending: true, nullsFirst: false }).range(from, to)
 
   const { data, count, error } = await query
   if (error) throw new Error(error.message)
@@ -315,9 +326,9 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
 export async function getArchiveDates(): Promise<(string | null)[]> {
   const { data } = await supabase
     .from('documents')
-    .select('date')
-    .eq('visibility', 'public')
-  return (data ?? []).map((d) => (d as { date: string | null }).date)
+    .select(SORT_DATE_KEY)
+    .eq(VISIBILITY_COLUMN, 'public')
+  return (data as unknown as Record<string, string | null>[] ?? []).map((d) => d[SORT_DATE_KEY])
 }
 
 /**
@@ -330,14 +341,14 @@ export async function searchDocumentDates(
 ): Promise<(string | null)[]> {
   let query = supabase
     .from('documents')
-    .select('date')
-    .eq('visibility', 'public')
+    .select(SORT_DATE_KEY)
+    .eq(VISIBILITY_COLUMN, 'public')
 
   if (params.q?.trim()) {
-    query = query.textSearch('fts', params.q.trim(), { type: 'websearch', config: 'english' })
+    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
   }
-  if (params.date_from) query = query.gte('date', params.date_from)
-  if (params.date_to)   query = query.lte('date', params.date_to)
+  if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
+  if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
 
   for (const field of MULTISELECT_FILTER_FIELDS) {
     const values = params.filters?.[field.paramKey!] ?? []
@@ -345,7 +356,7 @@ export async function searchDocumentDates(
   }
 
   const { data } = await query
-  return (data ?? []).map((d) => (d as { date: string | null }).date)
+  return (data as unknown as Record<string, string | null>[] ?? []).map((d) => d[SORT_DATE_KEY])
 }
 
 // ── Map pin types and query ────────────────────────────────────────────────
@@ -366,9 +377,9 @@ export async function getMapPins(): Promise<MapPin[]> {
 
     supabase
       .from('documents')
-      .select('id, title, date, locations_mentioned')
-      .eq('visibility', 'public')
-      .not('locations_mentioned', 'is', null),
+      .select(`id, title, ${SORT_DATE_KEY}, ${LOCATION_FIELD_KEY}`)
+      .eq(VISIBILITY_COLUMN, 'public')
+      .not(LOCATION_FIELD_KEY, 'is', null),
   ])
 
   if (geocodesRes.status === 'rejected' || docsRes.status === 'rejected') return []
@@ -376,7 +387,7 @@ export async function getMapPins(): Promise<MapPin[]> {
   const geocodes = (geocodesRes.value.data ?? []) as {
     location: string; lat: number; lng: number
   }[]
-  const docs = (docsRes.value.data ?? []) as {
+  const docs = (docsRes.value.data ?? []) as unknown as {
     id: number; title: string | null; date: string | null; locations_mentioned: string[]
   }[]
 
@@ -433,27 +444,26 @@ export async function getPersonDocuments(personId: number): Promise<{
           .from('documents')
           .select(DOC_SUMMARY_COLUMNS)
           .in('id', mentionedDocIds)
-          .eq('visibility', 'public')
-          .order('date', { ascending: true, nullsFirst: false })
+          .eq(VISIBILITY_COLUMN, 'public')
+          .order(SORT_DATE_KEY, { ascending: true, nullsFirst: false })
       : Promise.resolve({ data: [] }),
 
-    // Documents where this person is listed as author_or_creator
     supabase
       .from('documents')
       .select(DOC_SUMMARY_COLUMNS)
-      .contains('author_or_creator', [String(personId)])
-      .eq('visibility', 'public')
-      .order('date', { ascending: true, nullsFirst: false }),
+      .contains(AUTHOR_FIELD_KEY, [String(personId)])
+      .eq(VISIBILITY_COLUMN, 'public')
+      .order(SORT_DATE_KEY, { ascending: true, nullsFirst: false }),
   ])
 
   return {
     mentioned:
       mentionedRes.status === 'fulfilled' && mentionedRes.value.data
-        ? (mentionedRes.value.data as Record<string, unknown>[])
+        ? (mentionedRes.value.data as unknown as Record<string, unknown>[])
         : [],
     authored:
       authoredRes.status === 'fulfilled' && authoredRes.value.data
-        ? (authoredRes.value.data as Record<string, unknown>[])
+        ? (authoredRes.value.data as unknown as Record<string, unknown>[])
         : [],
   }
 }
