@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { FILTER_FIELDS, type FieldConfig } from '@/lib/field-config'
+import { FILTER_FIELDS, DATE_FILTER_FIELD, type FieldConfig } from '@/lib/field-config'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -142,8 +142,8 @@ function DateRangeGroup({
   dateTo: string
   onChange: (from: string, to: string) => void
 }) {
-  const MIN = '1785-01-01'
-  const MAX = '1848-12-31'
+  const MIN = DATE_FILTER_FIELD.minDate!
+  const MAX = DATE_FILTER_FIELD.maxDate!
 
   return (
     <div className="border-b border-border pb-3">
