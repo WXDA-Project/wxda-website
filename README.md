@@ -19,11 +19,11 @@ A digital archive and research tool for historical records related to women's cr
 Create a `.env.local` file at the project root:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 ```
 
-Both values are found in the Supabase dashboard under **Project Settings → API**.
+Both values are found in the Supabase dashboard under **Project Settings → API**. Use the publishable key (format `sb_publishable_...`), not the legacy JWT anon key.
 
 ### Development
 
