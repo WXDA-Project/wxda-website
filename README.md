@@ -23,7 +23,8 @@ SUPABASE_URL=https://<project>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 ```
 
-Both values are found in the Supabase dashboard under **Project Settings → API**. Use the publishable key (format `sb_publishable_...`), not the legacy JWT anon key.
+- **`SUPABASE_URL`**: construct from your project ID — found in **Project Settings → General**. Format: `https://<project-id>.supabase.co`
+- **`SUPABASE_PUBLISHABLE_KEY`**: found in **Project Settings → API Keys**. Use the publishable key (format `sb_publishable_...`), not the legacy JWT anon key.
 
 ### Development
 
