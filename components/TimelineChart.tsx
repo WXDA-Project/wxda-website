@@ -66,7 +66,7 @@ export default function TimelineChart({ archiveDates, filteredDates }: Props) {
               y={CHART_H - h}
               width={BAR_W}
               height={h}
-              fill="#d4c5a9"
+              fill="var(--color-border)"
             />
           )
         })}
@@ -84,7 +84,7 @@ export default function TimelineChart({ archiveDates, filteredDates }: Props) {
               y={CHART_H - h}
               width={BAR_W}
               height={h}
-              fill="#7a1f1f"
+              fill="var(--color-crimson)"
             />
           )
         })}
@@ -92,7 +92,7 @@ export default function TimelineChart({ archiveDates, filteredDates }: Props) {
         {/* ── Baseline ─────────────────────────────────────────────── */}
         <line
           x1={0} y1={CHART_H} x2={SVG_W} y2={CHART_H}
-          stroke="#d4c5a9" strokeWidth={0.75}
+          stroke="var(--color-border)" strokeWidth={0.75}
         />
 
         {/* ── Year labels ──────────────────────────────────────────── */}
@@ -102,7 +102,7 @@ export default function TimelineChart({ archiveDates, filteredDates }: Props) {
             x={(year - MIN_YEAR) * BAR_SLOT}
             y={CHART_H + 12}
             fontSize={9}
-            fill="#6b5f4e"
+            fill="var(--color-muted)"
             textAnchor={anchor}
             fontFamily="Georgia,'Times New Roman',serif"
           >
@@ -111,18 +111,18 @@ export default function TimelineChart({ archiveDates, filteredDates }: Props) {
         ))}
 
         {/* ── Legend ───────────────────────────────────────────────── */}
-        <rect x={SVG_W - 104} y={5}  width={7} height={7} fill="#d4c5a9" />
+        <rect x={SVG_W - 104} y={5}  width={7} height={7} fill="var(--color-border)" />
         <text
           x={SVG_W - 93} y={12}
-          fontSize={8} fill="#6b5f4e"
+          fontSize={8} fill="var(--color-muted)"
           fontFamily="Georgia,'Times New Roman',serif"
         >
           all records
         </text>
-        <rect x={SVG_W - 104} y={17} width={7} height={7} fill="#7a1f1f" />
+        <rect x={SVG_W - 104} y={17} width={7} height={7} fill="var(--color-crimson)" />
         <text
           x={SVG_W - 93} y={24}
-          fontSize={8} fill="#6b5f4e"
+          fontSize={8} fill="var(--color-muted)"
           fontFamily="Georgia,'Times New Roman',serif"
         >
           filtered
