@@ -86,7 +86,7 @@ function RecordResultsTable({ records }: { records: Record<string, unknown>[] })
         </thead>
         <tbody>
           {records.map((record) => (
-            <tr key={record.id as number} className="border-b border-border hover:bg-white transition-colors">
+            <tr key={record.id as number} className="border-b border-border hover:bg-paper transition-colors">
               {TABLE_FIELDS.map((f) => {
                 const raw = record[f.key]
                 let display: string
@@ -155,7 +155,7 @@ function PersonResultsTable({ records }: { records: PersonRow[] }) {
           {records.map((person) => {
             const name = personDisplayName(person as unknown as PersonSummary)
             return (
-              <tr key={person.id} className="border-b border-border hover:bg-white transition-colors">
+              <tr key={person.id} className="border-b border-border hover:bg-paper transition-colors">
                 <td className="py-3 px-3 align-top">
                   <Link href={`/person/${person.id}`} className="text-sm font-semibold hover:underline text-crimson no-underline">
                     {name}

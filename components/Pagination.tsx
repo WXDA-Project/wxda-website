@@ -97,7 +97,7 @@ export default function Pagination({ currentPage, totalPages }: PaginationProps)
                 aria-current={p === currentPage ? 'page' : undefined}
                 className={`px-3 py-1.5 text-sm rounded border transition-colors cursor-pointer ${
                   p === currentPage
-                    ? 'border-crimson bg-crimson text-white font-bold'
+                    ? 'border-crimson bg-crimson text-on-accent font-bold'
                     : 'border-border bg-paper text-ink font-normal'
                 }`}
               >

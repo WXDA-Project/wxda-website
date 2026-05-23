@@ -15,6 +15,12 @@
   --color-tag-bg:    #e8e0d0;   /* chip / tag background */
   --color-tag-fg:    #3d3325;   /* chip / tag text */
 
+  /* Semantic surface tokens */
+  --color-on-accent:       #ffffff;              /* text / icons on crimson surfaces */
+  --color-on-accent-faint: rgb(255 255 255 / 0.3); /* translucent white on crimson (count badges) */
+  --color-overlay:         rgb(0 0 0 / 0.4);     /* modal and drawer backdrops */
+  --color-overlay-dim:     rgb(0 0 0 / 0.2);     /* lighter surface overlays (map etc.) */
+
   /* Typography */
   --font-sans: var(--font-geist-sans), Georgia, serif;
   --font-mono: var(--font-geist-mono), 'Courier New', monospace;
@@ -53,7 +59,7 @@ body {
   z-index: 9999;
   padding: 0.5rem 1rem;
   background: var(--color-crimson);
-  color: #fff;
+  color: var(--color-on-accent);
   font-weight: 700;
   text-decoration: none;
 }
