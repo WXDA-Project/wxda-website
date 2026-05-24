@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getPerson, getPersonDocuments, personDisplayName, type PersonSummary } from '@/lib/queries'
-import { PERSON_DETAIL_FIELDS } from '@/lib/person-field-config'
+import { getPerson, getPersonDocuments, personDisplayName, documentDisplayTitle, type PersonSummary } from '@/lib/queries'
+import { PERSON_DETAIL_FIELDS, PERSON_BADGE_FIELDS, PERSON_SUMMARY_KEY } from '@/lib/config/person-field-config'
+import { SORT_DATE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY } from '@/lib/config/document-field-config'
+import DownloadPdfButton, { type PdfDoc, type PdfSection } from '@/components/DownloadPdfButton'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -45,11 +47,10 @@ function DocumentList({ docs }: { docs: Record<string, unknown>[] }) {
   return (
     <ul className="space-y-3 list-none p-0 m-0">
       {docs.map((doc) => {
-        const nameTitle = Array.isArray(doc.name_title) ? doc.name_title[0] : doc.name_title
-        const displayTitle = (nameTitle as string) || (doc.title as string) || `Record #${doc.id}`
-        const summary = doc.short_summary as string | null
-        const dateStr = doc.date as string | null
-        const categories = doc.provisional_category as string[] | null
+        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const summary = doc[DOC_SUMMARY_KEY] as string | null
+        const dateStr = doc[SORT_DATE_KEY] as string | null
+        const categories = doc[DOC_CATEGORY_KEY] as string[] | null
 
         return (
           <li
@@ -100,21 +101,70 @@ export default async function PersonPage({
 
   if (!person) notFound()
 
-  const p = person as unknown as PersonSummary & Record<string, unknown>
+  const p = person as PersonSummary
   const name = personDisplayName(p)
+
+  // ── Build PDF document ────────────────────────────────────────────────────
+  const pdfSections: PdfSection[] = []
+
+  if (p[PERSON_SUMMARY_KEY])
+    pdfSections.push({ heading: 'Summary', rows: [{ label: '', value: p[PERSON_SUMMARY_KEY] as string }] })
+
+  const personDetailRows = PERSON_DETAIL_FIELDS
+    .map(({ key, label }) => {
+      const val = formatArr(p[key])
+      return val ? { label, value: val } : null
+    })
+    .filter((r): r is { label: string; value: string } => r !== null)
+  if (personDetailRows.length > 0) pdfSections.push({ heading: 'Person Details', rows: personDetailRows })
+
+  if (docs.mentioned.length > 0)
+    pdfSections.push({
+      heading: `Mentioned in ${docs.mentioned.length} Record${docs.mentioned.length !== 1 ? 's' : ''}`,
+      rows: docs.mentioned.map((doc) => {
+        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const dateStr = doc[SORT_DATE_KEY] as string | null
+        return { label: dateStr ? formatDate(dateStr) : '', value: displayTitle }
+      }),
+    })
+
+  if (docs.authored.length > 0)
+    pdfSections.push({
+      heading: `Author / Creator of ${docs.authored.length} Record${docs.authored.length !== 1 ? 's' : ''}`,
+      rows: docs.authored.map((doc) => {
+        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const dateStr = doc[SORT_DATE_KEY] as string | null
+        return { label: dateStr ? formatDate(dateStr) : '', value: displayTitle }
+      }),
+    })
+
+  const badges = PERSON_BADGE_FIELDS.flatMap((field) => {
+    const val = p[field.key]
+    if (!val) return []
+    return field.isArray ? (val as string[]) : [val as string]
+  })
+
+  const pdfDoc: PdfDoc = {
+    title: name,
+    subtitle: `WXDA Person Record #${id}${badges.length > 0 ? ` · ${badges.join(', ')}` : ''}`,
+    sections: pdfSections,
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="mb-5 text-sm text-muted">
-        <ol className="flex gap-2 list-none p-0 m-0 flex-wrap">
-          <li><Link href="/">Home</Link></li>
-          <li aria-hidden="true">/</li>
-          <li><Link href="/search">Search Records</Link></li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page">{name}</li>
-        </ol>
-      </nav>
+      {/* Breadcrumb + actions */}
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <nav aria-label="Breadcrumb" className="text-sm text-muted">
+          <ol className="flex gap-2 list-none p-0 m-0 flex-wrap">
+            <li><Link href="/">Home</Link></li>
+            <li aria-hidden="true">/</li>
+            <li><Link href="/search">Search Records</Link></li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page">{name}</li>
+          </ol>
+        </nav>
+        <DownloadPdfButton pdf={pdfDoc} />
+      </div>
 
       <article aria-label={`Person: ${name}`}>
         {/* ── Header ────────────────────────────────────────────────────── */}
@@ -126,33 +176,29 @@ export default async function PersonPage({
             {name}
           </h1>
 
-          {/* Badges */}
+          {/* Badges — driven by person-field-config PERSON_BADGE_FIELDS */}
           <div className="flex flex-wrap gap-2 mt-2">
-            {p.person_type &&
-              (p.person_type as string[]).map((t) => (
+            {PERSON_BADGE_FIELDS.flatMap((field, fi) => {
+              const val = p[field.key]
+              if (!val) return []
+              const values = field.isArray ? (val as string[]) : [val as string]
+              return values.map((v) => (
                 <span
-                  key={t}
-                  className="text-xs px-2.5 py-1 rounded-full font-semibold bg-tag-bg text-tag-fg"
+                  key={`${field.key}-${v}`}
+                  className={`text-xs px-2.5 py-1 rounded-full bg-tag-bg ${
+                    fi === 0 ? 'font-semibold text-tag-fg' : 'text-muted'
+                  }`}
                 >
-                  {t}
+                  {v}
                 </span>
-              ))}
-            {p.presumptive_sex && (
-              <span className="text-xs px-2.5 py-1 rounded-full bg-tag-bg text-muted">
-                {p.presumptive_sex as string}
-              </span>
-            )}
-            {p.social_rank && (
-              <span className="text-xs px-2.5 py-1 rounded-full bg-tag-bg text-muted">
-                {p.social_rank as string}
-              </span>
-            )}
+              ))
+            })}
           </div>
 
           {/* Short summary */}
-          {p.short_summary && (
+          {(p[PERSON_SUMMARY_KEY] as string | null) && (
             <p className="mt-4 text-base leading-relaxed text-ink font-serif">
-              {p.short_summary as string}
+              {p[PERSON_SUMMARY_KEY] as string}
             </p>
           )}
         </div>

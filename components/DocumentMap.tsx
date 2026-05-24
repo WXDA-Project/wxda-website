@@ -116,7 +116,7 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
             className: '',
             iconSize: [outer, outer],
             iconAnchor: [outer / 2, outer / 2],
-            html: `<div aria-label="${count} records" style="width:${outer}px;height:${outer}px;background:rgba(122,31,31,0.18);border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:${inner}px;height:${inner}px;background:#7a1f1f;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:${fontSize}px;font-family:Georgia,'Times New Roman',serif;">${count}</div></div>`,
+            html: `<div aria-label="${count} records" style="width:${outer}px;height:${outer}px;background:color-mix(in srgb,var(--color-crimson) 18%,transparent);border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:${inner}px;height:${inner}px;background:var(--color-crimson);border-radius:50%;border:2px solid var(--color-on-accent);box-shadow:0 1px 5px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:var(--color-on-accent);font-weight:700;font-size:${fontSize}px;font-family:Georgia,'Times New Roman',serif;">${count}</div></div>`,
           })
         },
       })
@@ -126,7 +126,7 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
 
       const markerIcon = L.divIcon({
         className: '',
-        html: '<div style="width:11px;height:11px;background:#7a1f1f;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>',
+        html: '<div style="width:11px;height:11px;background:var(--color-crimson);border-radius:50%;border:2px solid var(--color-on-accent);box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>',
         iconSize: [11, 11],
         iconAnchor: [5, 5],
       })
@@ -149,11 +149,13 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
         p.lng,
         Math.sqrt(p.documents.length / maxDocs),
       ])
+      const crimson = getComputedStyle(document.documentElement).getPropertyValue('--color-crimson').trim() || '#7a1f1f'
       const heatLayer = L.heatLayer(heatData, {
         radius: 50,
         blur: 30,
         minOpacity: 0.45,
-        gradient: { 0.1: '#f5c5c5', 0.5: '#c45a5a', 1.0: '#7a1f1f' },
+        // Gradient stops are crimson tints — high end tracks the --color-crimson token
+        gradient: { 0.1: '#f5c5c5', 0.5: '#c45a5a', 1.0: crimson },
       }) as Layer
 
       if (modeRef.current === 'heatmap') {
@@ -229,7 +231,7 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
         {/* Mobile: translucent backdrop — clicking it closes the sidebar */}
         {selectedPin && (
           <div
-            className="lg:hidden absolute inset-0 z-[1999] bg-black/20"
+            className="lg:hidden absolute inset-0 z-[1999] bg-overlay-dim"
             onClick={() => setSelectedPin(null)}
             aria-hidden="true"
           />

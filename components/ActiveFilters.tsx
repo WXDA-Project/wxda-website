@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import type { FieldConfig } from '@/lib/field-config'
+import type { FieldConfig } from '@/lib/config/document-field-config'
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr.length === 4 ? `${dateStr}-01-01` : dateStr)
