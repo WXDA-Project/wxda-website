@@ -1,5 +1,5 @@
 /**
- * FIELD CONFIG — single source of truth for the WXDA website.
+ * DOCUMENT FIELD CONFIG — single source of truth for the WXDA website.
  *
  * Every field that appears on the search page or record detail page is
  * declared here. To add, remove, or rename a field — including making it
@@ -22,8 +22,15 @@ export type FieldRole =
   | 'container-ref'  // documents: FK ID of the containing publication
   | 'citation'       // documents: cite-as attribution string
   | 'source-url'     // documents: original source URL
-  | 'person-sort'    // persons: default ORDER BY column
-  | 'person-badge'   // persons: displayed as a badge chip on the person page
+  | 'doc-title'      // documents: verbatim title column
+  | 'doc-name-title' // documents: display name/title column (preferred over title)
+  | 'doc-summary'    // documents: short summary column
+  | 'doc-category'   // documents: category array column
+  | 'person-sort'         // persons: default ORDER BY column
+  | 'person-type'         // persons: person type column (used in chips and enrichment)
+  | 'person-name-title'   // persons: name/title component used in display name composition
+  | 'person-title'        // persons: canonical full name (display name fallback)
+  | 'person-summary'      // persons: short summary column
 
 export interface FieldConfig {
   /** Column name in the `documents` (or `persons`) Supabase table */
@@ -32,6 +39,8 @@ export interface FieldConfig {
   label: string
   /** Semantic role — lets code import a stable constant rather than a raw string */
   role?: FieldRole
+  /** True when this field is displayed as a badge chip (persons only) */
+  badge?: boolean
   /**
    * Filter UI type to show in the search filter panel.
    * Omit (undefined) for fields that are display-only.
@@ -114,6 +123,7 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'short_summary',
     label: 'Summary',
+    role: 'doc-summary',
     showInTable: true,
     showInDetail: true,
     enriched: true,
@@ -123,6 +133,7 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'provisional_category',
     label: 'Category',
+    role: 'doc-category',
     showInDocSummary: true,
     filterType: 'multiselect',
     paramKey: 'category',
@@ -211,6 +222,7 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'title',
     label: 'Title',
+    role: 'doc-title',
     showInTable: false,
     showInDetail: true,
     enriched: true,
@@ -219,6 +231,7 @@ export const FIELDS: FieldConfig[] = [
   {
     key: 'name_title',
     label: 'Name / Title',
+    role: 'doc-name-title',
     showInTable: false,
     showInDetail: true,
     enriched: true,
@@ -465,3 +478,14 @@ export const SOURCE_URL_KEY      = UNIQUE_FIELDS.find((f) => f.role === 'source-
 
 /** Compact SELECT column list for document summaries (person detail page document lists) */
 export const DOC_SUMMARY_COLUMNS = ['id', ...UNIQUE_FIELDS.filter((f) => f.showInDocSummary).map((f) => f.key)].join(', ')
+
+// ── Semantic field lookups for document display ────────────────────────────
+
+/** Column key for the verbatim title (full journal title, fallback display) */
+export const DOC_TITLE_KEY      = UNIQUE_FIELDS.find((f) => f.role === 'doc-title')!.key
+/** Column key for the preferred display name/title (shown first, may be shorter) */
+export const DOC_NAME_TITLE_KEY = UNIQUE_FIELDS.find((f) => f.role === 'doc-name-title')!.key
+/** Column key for the document short summary */
+export const DOC_SUMMARY_KEY    = UNIQUE_FIELDS.find((f) => f.role === 'doc-summary')!.key
+/** Column key for the document category array */
+export const DOC_CATEGORY_KEY   = UNIQUE_FIELDS.find((f) => f.role === 'doc-category')!.key

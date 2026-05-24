@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { FILTER_FIELDS, DATE_FILTER_FIELD, type FieldConfig } from '@/lib/field-config'
+import { FILTER_FIELDS, DATE_FILTER_FIELD, type FieldConfig } from '@/lib/config/document-field-config'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
