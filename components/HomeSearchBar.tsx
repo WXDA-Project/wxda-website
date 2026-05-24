@@ -63,7 +63,7 @@ export default function HomeSearchBar() {
         />
         <button
           type="submit"
-          className="px-4 sm:px-5 py-3 text-sm font-semibold rounded text-white transition-colors shrink-0 bg-crimson hover:bg-crimson-hover cursor-pointer"
+          className="px-4 sm:px-5 py-3 text-sm font-semibold rounded text-on-accent transition-colors shrink-0 bg-crimson hover:bg-crimson-hover cursor-pointer"
           aria-label="Search"
         >
           <span className="hidden sm:inline">Search</span>

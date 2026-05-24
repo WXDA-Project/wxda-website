@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { FILTER_FIELDS, type FieldConfig } from '@/lib/field-config'
+import { FILTER_FIELDS, DATE_FILTER_FIELD, type FieldConfig } from '@/lib/config/document-field-config'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -88,7 +88,7 @@ function MultiselectGroup({
           {label}
           {hasSelection && (
             <span
-              className="text-xs font-bold rounded-full px-1.5 py-0.5 leading-none bg-crimson text-white"
+              className="text-xs font-bold rounded-full px-1.5 py-0.5 leading-none bg-crimson text-on-accent"
               aria-label={`${selected.length} selected`}
             >
               {selected.length}
@@ -142,8 +142,8 @@ function DateRangeGroup({
   dateTo: string
   onChange: (from: string, to: string) => void
 }) {
-  const MIN = '1785-01-01'
-  const MAX = '1848-12-31'
+  const MIN = DATE_FILTER_FIELD.minDate!
+  const MAX = DATE_FILTER_FIELD.maxDate!
 
   return (
     <div className="border-b border-border pb-3">
@@ -207,11 +207,17 @@ interface SearchFiltersProps {
    * Omit for the records tab (default). Pass 'persons' for the persons tab.
    */
   tab?: string
+  /**
+   * Distinct option values for every multiselect filter, keyed by paramKey.
+   * Fetched server-side from the database and passed as a prop.
+   */
+  filterOptions: Record<string, string[]>
 }
 
 export default function SearchFilters({
   filterFields = FILTER_FIELDS,
   tab,
+  filterOptions,
 }: SearchFiltersProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -326,7 +332,7 @@ export default function SearchFilters({
             key={field.key}
             label={field.label}
             paramKey={field.paramKey!}
-            options={field.filterOptions!}
+            options={filterOptions[field.paramKey!] ?? []}
             selected={draft.multiselects[field.paramKey!] ?? []}
             onChange={handleMultiselect}
           />
@@ -339,7 +345,7 @@ export default function SearchFilters({
           type="button"
           onClick={apply}
           disabled={!isDirty && draftCount === 0}
-          className={`flex-1 py-2 text-sm font-semibold rounded text-white transition-opacity bg-crimson disabled:opacity-50 ${
+          className={`flex-1 py-2 text-sm font-semibold rounded text-on-accent transition-opacity bg-crimson disabled:opacity-50 ${
             isDirty || draftCount > 0 ? 'cursor-pointer' : 'cursor-not-allowed'
           }`}
         >
@@ -360,13 +366,13 @@ export default function SearchFilters({
           aria-controls="mobile-filter-panel"
           className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded border w-full justify-center cursor-pointer ${
             activeCount > 0
-              ? 'border-crimson bg-crimson text-white'
+              ? 'border-crimson bg-crimson text-on-accent'
               : 'border-border bg-paper text-ink'
           }`}
         >
           <span>⚙ Filters</span>
           {activeCount > 0 && (
-            <span className="text-xs font-bold rounded-full px-1.5 py-0.5 leading-none bg-white/30">
+            <span className="text-xs font-bold rounded-full px-1.5 py-0.5 leading-none bg-on-accent-faint">
               {activeCount} active
             </span>
           )}
@@ -383,7 +389,7 @@ export default function SearchFilters({
           id="mobile-filter-panel"
         >
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-overlay"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
