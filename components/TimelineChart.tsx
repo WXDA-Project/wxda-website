@@ -1,6 +1,6 @@
 // Pure server component — renders an SVG, no client JS.
 
-import { DATE_FILTER_FIELD } from '@/lib/field-config'
+import { DATE_FILTER_FIELD } from '@/lib/config/document-field-config'
 
 const MIN_YEAR = parseInt(DATE_FILTER_FIELD.minDate!.slice(0, 4), 10)
 const MAX_YEAR = parseInt(DATE_FILTER_FIELD.maxDate!.slice(0, 4), 10)

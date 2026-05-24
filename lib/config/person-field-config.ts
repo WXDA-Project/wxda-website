@@ -1,19 +1,20 @@
 /**
  * PERSON FIELD CONFIG — single source of truth for person search and display.
  *
- * Mirrors the structure of field-config.ts but for the `persons` table.
+ * Mirrors the structure of document-field-config.ts but for the `persons` table.
  * To add, remove, or change a person filter or display field, edit ONLY this file.
- * No changes are needed in queries.ts, SearchFilters.tsx, or the search page.
+ * No changes are needed in queries/, SearchFilters.tsx, or the search page.
  */
 
-import type { FieldConfig } from './field-config'
+import type { FieldConfig } from './document-field-config'
 
 export const PERSON_FIELDS: FieldConfig[] = [
   // ── Filter + table fields ──────────────────────────────────────────────────
   {
     key: 'person_type',
     label: 'Person Type',
-    role: 'person-badge',
+    role: 'person-type',
+    badge: true,
     filterType: 'multiselect',
     paramKey: 'person_type',
     showInTable: true,
@@ -24,7 +25,7 @@ export const PERSON_FIELDS: FieldConfig[] = [
   {
     key: 'presumptive_sex',
     label: 'Presumptive Sex',
-    role: 'person-badge',
+    badge: true,
     filterType: 'multiselect',
     paramKey: 'presumptive_sex',
     showInTable: true,
@@ -34,7 +35,7 @@ export const PERSON_FIELDS: FieldConfig[] = [
   {
     key: 'social_rank',
     label: 'Social Rank',
-    role: 'person-badge',
+    badge: true,
     filterType: 'multiselect',
     paramKey: 'person_rank',
     showInTable: true,
@@ -44,6 +45,7 @@ export const PERSON_FIELDS: FieldConfig[] = [
   {
     key: 'short_summary',
     label: 'Summary',
+    role: 'person-summary',
     showInTable: true,
     showInDetail: false, // rendered in the page header, not the detail dl
     maxTableLength: 140,
@@ -54,8 +56,8 @@ export const PERSON_FIELDS: FieldConfig[] = [
   { key: 'gender',                  label: 'Gender',                    showInTable: false, showInDetail: true },
   { key: 'given_names',             label: 'Given Names',               role: 'person-sort', showInTable: false, showInDetail: true, showInEnrichment: true },
   { key: 'honorific',               label: 'Honorific',                 showInTable: false, showInDetail: true, isArray: true },
-  { key: 'name_title',              label: 'Name / Title(s)',           showInTable: false, showInDetail: true, isArray: true, showInEnrichment: true },
-  { key: 'title',                   label: 'Title',                     showInTable: false, showInDetail: true, showInEnrichment: true },
+  { key: 'name_title',              label: 'Name / Title(s)',           role: 'person-name-title', showInTable: false, showInDetail: true, isArray: true, showInEnrichment: true },
+  { key: 'title',                   label: 'Title',                     role: 'person-title',      showInTable: false, showInDetail: true, showInEnrichment: true },
   { key: 'alternate_name_s_title_s',label: 'Alternate Names / Titles', showInTable: false, showInDetail: true, isArray: true },
   { key: 'alternative_name',        label: 'Alternative Name',          showInTable: false, showInDetail: true },
   { key: 'crossdressing_name_s',    label: 'Cross-Dressing Name(s)',   showInTable: false, showInDetail: true, isArray: true },
@@ -79,14 +81,23 @@ export const PERSON_MULTISELECT_FILTER_FIELDS = PERSON_FILTER_FIELDS.filter(
 
 // ── Semantic constants (derived via role / flags) ──────────────────────────
 
-/** Column key used to ORDER BY person search results */
-export const PERSON_SORT_KEY = PERSON_FIELDS.find((f) => f.role === 'person-sort')!.key
+/** Column key used to ORDER BY person search results (also the given-names field) */
+export const PERSON_SORT_KEY         = PERSON_FIELDS.find((f) => f.role === 'person-sort')!.key
+/** Column key for the name/title component used in display name composition */
+export const PERSON_NAME_TITLE_KEY   = PERSON_FIELDS.find((f) => f.role === 'person-name-title')!.key
+/** Column key for the canonical full name (display name fallback) */
+export const PERSON_TITLE_KEY        = PERSON_FIELDS.find((f) => f.role === 'person-title')!.key
 
 /** Fields shown as badge chips on the person detail page (in render order) */
-export const PERSON_BADGE_FIELDS = PERSON_FIELDS.filter((f) => f.role === 'person-badge')
+export const PERSON_BADGE_FIELDS = PERSON_FIELDS.filter((f) => f.badge)
 
 /** Column keys shown as badge chips on the person detail page */
 export const PERSON_BADGE_KEYS = PERSON_BADGE_FIELDS.map((f) => f.key)
+
+/** Column key for person type (used in chips and enrichment display) */
+export const PERSON_TYPE_KEY    = PERSON_FIELDS.find((f) => f.role === 'person-type')!.key
+/** Column key for person short summary */
+export const PERSON_SUMMARY_KEY = PERSON_FIELDS.find((f) => f.role === 'person-summary')!.key
 
 /**
  * SELECT column list for person enrichment queries (authors, mentioned persons).

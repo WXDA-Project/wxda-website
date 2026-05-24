@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getPerson, getPersonDocuments, personDisplayName, type PersonSummary } from '@/lib/queries'
-import { PERSON_DETAIL_FIELDS, PERSON_BADGE_FIELDS } from '@/lib/person-field-config'
+import { getPerson, getPersonDocuments, personDisplayName, documentDisplayTitle, type PersonSummary } from '@/lib/queries'
+import { PERSON_DETAIL_FIELDS, PERSON_BADGE_FIELDS, PERSON_SUMMARY_KEY } from '@/lib/config/person-field-config'
+import { SORT_DATE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY } from '@/lib/config/document-field-config'
 import DownloadPdfButton, { type PdfDoc, type PdfSection } from '@/components/DownloadPdfButton'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -46,11 +47,10 @@ function DocumentList({ docs }: { docs: Record<string, unknown>[] }) {
   return (
     <ul className="space-y-3 list-none p-0 m-0">
       {docs.map((doc) => {
-        const nameTitle = Array.isArray(doc.name_title) ? doc.name_title[0] : doc.name_title
-        const displayTitle = (nameTitle as string) || (doc.title as string) || `Record #${doc.id}`
-        const summary = doc.short_summary as string | null
-        const dateStr = doc.date as string | null
-        const categories = doc.provisional_category as string[] | null
+        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const summary = doc[DOC_SUMMARY_KEY] as string | null
+        const dateStr = doc[SORT_DATE_KEY] as string | null
+        const categories = doc[DOC_CATEGORY_KEY] as string[] | null
 
         return (
           <li
@@ -101,14 +101,14 @@ export default async function PersonPage({
 
   if (!person) notFound()
 
-  const p = person as unknown as PersonSummary & Record<string, unknown>
+  const p = person as PersonSummary
   const name = personDisplayName(p)
 
   // ── Build PDF document ────────────────────────────────────────────────────
   const pdfSections: PdfSection[] = []
 
-  if (p.short_summary)
-    pdfSections.push({ heading: 'Summary', rows: [{ label: '', value: p.short_summary as string }] })
+  if (p[PERSON_SUMMARY_KEY])
+    pdfSections.push({ heading: 'Summary', rows: [{ label: '', value: p[PERSON_SUMMARY_KEY] as string }] })
 
   const personDetailRows = PERSON_DETAIL_FIELDS
     .map(({ key, label }) => {
@@ -122,9 +122,8 @@ export default async function PersonPage({
     pdfSections.push({
       heading: `Mentioned in ${docs.mentioned.length} Record${docs.mentioned.length !== 1 ? 's' : ''}`,
       rows: docs.mentioned.map((doc) => {
-        const nameTitle = Array.isArray(doc.name_title) ? doc.name_title[0] : doc.name_title
-        const displayTitle = String((nameTitle as string) || (doc.title as string) || `Record #${doc.id}`)
-        const dateStr = doc.date as string | null
+        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const dateStr = doc[SORT_DATE_KEY] as string | null
         return { label: dateStr ? formatDate(dateStr) : '', value: displayTitle }
       }),
     })
@@ -133,9 +132,8 @@ export default async function PersonPage({
     pdfSections.push({
       heading: `Author / Creator of ${docs.authored.length} Record${docs.authored.length !== 1 ? 's' : ''}`,
       rows: docs.authored.map((doc) => {
-        const nameTitle = Array.isArray(doc.name_title) ? doc.name_title[0] : doc.name_title
-        const displayTitle = String((nameTitle as string) || (doc.title as string) || `Record #${doc.id}`)
-        const dateStr = doc.date as string | null
+        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const dateStr = doc[SORT_DATE_KEY] as string | null
         return { label: dateStr ? formatDate(dateStr) : '', value: displayTitle }
       }),
     })
@@ -198,9 +196,9 @@ export default async function PersonPage({
           </div>
 
           {/* Short summary */}
-          {p.short_summary && (
+          {(p[PERSON_SUMMARY_KEY] as string | null) && (
             <p className="mt-4 text-base leading-relaxed text-ink font-serif">
-              {p.short_summary as string}
+              {p[PERSON_SUMMARY_KEY] as string}
             </p>
           )}
         </div>

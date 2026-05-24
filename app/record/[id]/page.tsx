@@ -5,6 +5,8 @@ import {
   getDocument,
   getDocumentEnrichment,
   personDisplayName,
+  documentDisplayTitle,
+  containerDisplayName,
   type PersonSummary,
   type ContainerSummary,
 } from '@/lib/queries'
@@ -16,7 +18,15 @@ import {
   CITE_AS_KEY,
   SOURCE_URL_KEY,
   SORT_DATE_KEY,
-} from '@/lib/field-config'
+  DOC_TITLE_KEY,
+  DOC_SUMMARY_KEY,
+} from '@/lib/config/document-field-config'
+import { PERSON_TYPE_KEY, PERSON_SUMMARY_KEY } from '@/lib/config/person-field-config'
+import {
+  CONTAINER_SHORT_NAME_KEY,
+  CONTAINER_SUMMARY_KEY,
+  CONTAINER_SOURCE_URL_KEY,
+} from '@/lib/config/container-field-config'
 import DownloadPdfButton, { type PdfDoc, type PdfSection } from '@/components/DownloadPdfButton'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -51,15 +61,16 @@ function Divider() {
 
 function PersonChip({ person }: { person: PersonSummary }) {
   const name = personDisplayName(person)
+  const personType = person[PERSON_TYPE_KEY] as string[] | null
   return (
     <Link
       href={`/person/${person.id}`}
       className="inline-flex items-center gap-1 text-sm rounded px-2.5 py-1 transition-colors hover:opacity-80 bg-tag-bg text-crimson no-underline font-semibold"
     >
       {name}
-      {person.person_type && person.person_type.length > 0 && (
+      {personType && personType.length > 0 && (
         <span className="text-xs font-normal text-muted">
-          ({person.person_type.join(', ')})
+          ({personType.join(', ')})
         </span>
       )}
     </Link>
@@ -77,7 +88,7 @@ export async function generateMetadata({
   const record = await getDocument(Number(id))
   if (!record) return { title: 'Record Not Found' }
   return {
-    title: (record.name_title as string) || (record.title as string) || `Record #${id}`,
+    title: documentDisplayTitle(record as Record<string, unknown>, id),
   }
 }
 
@@ -103,24 +114,25 @@ export default async function RecordDetailPage({
     numId,
   )
 
-  const title = rec.name_title || rec.title || `Record #${id}`
+  const title = documentDisplayTitle(rec, id)
 
   // ── Build PDF document ────────────────────────────────────────────────────
   const pdfSections: PdfSection[] = []
 
-  if (rec.short_summary)
-    pdfSections.push({ heading: 'Summary', rows: [{ label: '', value: rec.short_summary as string }] })
+  if (rec[DOC_SUMMARY_KEY])
+    pdfSections.push({ heading: 'Summary', rows: [{ label: '', value: rec[DOC_SUMMARY_KEY] as string }] })
 
-  if (rec.title && rec.title !== title)
-    pdfSections.push({ heading: 'Full Title', rows: [{ label: '', value: rec.title as string }] })
+  if (rec[DOC_TITLE_KEY] && rec[DOC_TITLE_KEY] !== title)
+    pdfSections.push({ heading: 'Full Title', rows: [{ label: '', value: rec[DOC_TITLE_KEY] as string }] })
 
   if (enrichment.container) {
     const c = enrichment.container
-    const cName = String(c.name_title ?? c.short_name ?? c.title ?? `Publication #${c.id}`)
+    const cName = containerDisplayName(c, c.id)
     const cRows: PdfSection['rows'] = [{ label: 'Title', value: cName }]
-    if (c.short_name && c.short_name !== cName) cRows.push({ label: 'Short name', value: c.short_name })
-    if (c.short_summary) cRows.push({ label: 'Description', value: c.short_summary })
-    if (c.cite_as) cRows.push({ label: 'Source URL', value: c.cite_as })
+    const cShortName = c[CONTAINER_SHORT_NAME_KEY] as string | null
+    if (cShortName && cShortName !== cName) cRows.push({ label: 'Short name', value: cShortName })
+    if (c[CONTAINER_SUMMARY_KEY]) cRows.push({ label: 'Description', value: c[CONTAINER_SUMMARY_KEY] as string })
+    if (c[CONTAINER_SOURCE_URL_KEY]) cRows.push({ label: 'Source URL', value: c[CONTAINER_SOURCE_URL_KEY] as string })
     pdfSections.push({ heading: 'Publication', rows: cRows })
   }
 
@@ -145,7 +157,7 @@ export default async function RecordDetailPage({
       heading: 'People Mentioned',
       rows: enrichment.mentionedPersons.map(({ person, relationship_type }) => ({
         label: personDisplayName(person),
-        value: [relationship_type, person.short_summary].filter(Boolean).join(' — '),
+        value: [relationship_type, person[PERSON_SUMMARY_KEY]].filter(Boolean).join(' — '),
       })),
     })
 
@@ -196,12 +208,12 @@ export default async function RecordDetailPage({
         </header>
 
         {/* ── Summary ─────────────────────────────────────────────────────── */}
-        {rec.short_summary && (
+        {(rec[DOC_SUMMARY_KEY] as string | null) && (
           <>
             <section aria-label="Summary">
               <SectionHeading>Summary</SectionHeading>
               <p className="text-base leading-relaxed text-ink font-serif">
-                {rec.short_summary}
+                {rec[DOC_SUMMARY_KEY] as string}
               </p>
             </section>
             <Divider />
@@ -209,12 +221,12 @@ export default async function RecordDetailPage({
         )}
 
         {/* ── Full verbatim title ──────────────────────────────────────────── */}
-        {rec.title && rec.title !== title && (
+        {(rec[DOC_TITLE_KEY] as string | null) && rec[DOC_TITLE_KEY] !== title && (
           <>
             <section aria-label="Full title">
               <SectionHeading>Full Title</SectionHeading>
               <p className="text-sm leading-relaxed italic text-ink">
-                {rec.title}
+                {rec[DOC_TITLE_KEY] as string}
               </p>
             </section>
             <Divider />
@@ -286,9 +298,9 @@ export default async function RecordDetailPage({
                     <span className="text-xs self-center text-muted">
                       {relationship_type}
                     </span>
-                    {person.short_summary && (
+                    {(person[PERSON_SUMMARY_KEY] as string | null) && (
                       <span className="text-xs self-center text-muted">
-                        — {person.short_summary}
+                        — {person[PERSON_SUMMARY_KEY] as string}
                       </span>
                     )}
                   </li>
@@ -335,26 +347,27 @@ export default async function RecordDetailPage({
 // ── Container card ─────────────────────────────────────────────────────────
 
 function ContainerCard({ container }: { container: ContainerSummary }) {
-  const name = container.name_title ?? container.short_name ?? container.title ?? `Publication #${container.id}`
+  const name = containerDisplayName(container, container.id)
+  const shortName = container[CONTAINER_SHORT_NAME_KEY] as string | null
   return (
     <div className="rounded p-3 text-sm bg-tag-bg border border-border">
       <p className="font-semibold text-ink">
         {name}
-        {container.short_name && container.short_name !== name && (
+        {shortName && shortName !== name && (
           <span className="font-normal ml-2 text-muted">
-            ({container.short_name})
+            ({shortName})
           </span>
         )}
       </p>
-      {container.short_summary && (
+      {(container[CONTAINER_SUMMARY_KEY] as string | null) && (
         <p className="mt-1 text-muted">
-          {container.short_summary}
+          {container[CONTAINER_SUMMARY_KEY] as string}
         </p>
       )}
-      {container.cite_as && (
+      {(container[CONTAINER_SOURCE_URL_KEY] as string | null) && (
         <p className="mt-1">
           <a
-            href={container.cite_as}
+            href={container[CONTAINER_SOURCE_URL_KEY] as string}
             target="_blank"
             rel="noopener noreferrer"
           >

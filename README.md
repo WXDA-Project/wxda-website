@@ -66,11 +66,18 @@ wxda-website/
 │   └── DocumentMap.tsx        # Leaflet map with clustering + heatmap
 ├── lib/
 │   ├── supabase.ts            # Supabase browser client singleton
-│   ├── queries.ts             # All database queries and cached helpers
-│   ├── field-config.ts        # Document field definitions (single source of truth)
-│   ├── field-config.md        # Reference guide for field-config.ts
-│   ├── person-field-config.ts # Person field definitions
-│   └── person-field-config.md # Reference guide for person-field-config.ts
+│   ├── config/                # Single source of truth for all DB column definitions
+│   │   ├── document-field-config.ts    # Documents table fields and derived constants
+│   │   ├── person-field-config.ts      # Persons table fields and derived constants
+│   │   ├── container-field-config.ts   # Containers table columns
+│   │   └── relationship-field-config.ts # Relationships table columns
+│   └── queries/               # All database queries, split by domain
+│       ├── index.ts           # Re-exports everything — import from '@/lib/queries'
+│       ├── types.ts           # Shared row interfaces and display helpers
+│       ├── documents.ts       # Document search, fetch, enrichment, timeline
+│       ├── persons.ts         # Person search, fetch, person-document links
+│       ├── map.ts             # Map pin query
+│       └── filters.ts         # Cached filter option generation
 └── public/                    # Static assets
 ```
 
@@ -209,7 +216,7 @@ Named historical individuals referenced across the archive.
 
 **RLS policy**: `visibility = ANY (ARRAY['public', 'viewable'])` — both values are readable by the anon key.
 
-**Display name logic**: `personDisplayName()` in `lib/queries.ts` combines `title`, `given_names`, and `alternative_name` — prioritising the most informative combination.
+**Display name logic**: `personDisplayName()` in `lib/queries/types.ts` combines `given_names` and the first value of `name_title` (surname), falling back to `title` then `Person #<id>`.
 
 ---
 
@@ -263,7 +270,7 @@ Publications, series, or collections that group documents.
 
 **RLS policy**: `true` (unrestricted — all rows readable by the anon key).
 
-Referenced by `documents.container`. Resolved in `getDocumentEnrichment()` in `lib/queries.ts`.
+Referenced by `documents.container`. Resolved in `getDocumentEnrichment()` in `lib/queries/documents.ts`.
 
 ---
 
@@ -280,39 +287,45 @@ Stores resolved latitude/longitude coordinates for location strings found in doc
 
 **RLS policy**: `true` (unrestricted — all rows readable by the anon key).
 
-Used exclusively by `getMapPins()` in `lib/queries.ts`, which joins distinct location strings from documents against this table to build the map data.
+Used exclusively by `getMapPins()` in `lib/queries/map.ts`, which joins distinct location strings from documents against this table to build the map data.
 
 ---
 
 ### Typical Data Fetching Flows
 
-**Search page (records tab)**
+**Search page (records tab)** — `lib/queries/documents.ts`, `lib/queries/filters.ts`
 1. `searchDocuments()` — full-text + filter query on `documents` with `fts @@ ...`, `date` range, and multiselect `overlaps`/`in` filters. Returns paginated rows.
 2. `searchDocumentDates()` — same query but `SELECT date` only, used to populate the timeline chart.
 3. `getArchiveDates()` — all dates from `documents` (unfiltered), for the chart background.
 4. `getDocumentFilterOptions()` — cached (1 h) distinct values for every multiselect filter field, fetched from `documents`.
 
-**Record detail page**
+**Record detail page** — `lib/queries/documents.ts`
 1. `getDocument(id)` — fetches a single document row by ID.
 2. `getDocumentEnrichment(id)` — parallel queries for: the parent container, mentioned persons (via `relationships`), and any persons whose `author_or_creator` array contains this document's ID.
 
-**Person detail page**
+**Person detail page** — `lib/queries/persons.ts`
 1. `getPerson(id)` — fetches a single person row by ID.
 2. `getPersonDocuments(id)` — fetches all documents linked to this person via `author_or_creator` or `relationships`.
 
-**Map page**
-1. `getMapPins()` — cached (1 h). Joins `documents.locations_mentioned` against `geocode_cache` to produce `{ location, lat, lng, documents[] }` pins.
+**Map page** — `lib/queries/map.ts`
+1. `getMapPins()` — joins `documents.locations_mentioned` against `geocode_cache` to produce `{ location, lat, lng, documents[] }` pins.
 
 ---
 
 ## Configuration System
 
-The codebase uses a **field config** pattern as a single source of truth for all column definitions. Adding, removing, or renaming a database column only requires changing one config file.
+The codebase uses a **field config** pattern as a single source of truth for all column definitions. Adding, removing, or renaming a database column only requires changing the relevant config file — no changes needed anywhere else.
 
-- **`lib/field-config.ts`** — document fields. See [`lib/field-config.md`](lib/field-config.md) for the full reference.
-- **`lib/person-field-config.ts`** — person fields. See [`lib/person-field-config.md`](lib/person-field-config.md) for the full reference.
+All config files live in `lib/config/`:
 
-The config drives: search result table columns, filter sidebar groups, active filter pills, record detail display, query SELECT clauses, and filter option generation.
+| File | Table | Reference |
+|---|---|---|
+| [`document-field-config.ts`](lib/config/document-field-config.ts) | `documents` | [`document-field-config.md`](lib/config/document-field-config.md) |
+| [`person-field-config.ts`](lib/config/person-field-config.ts) | `persons` | [`person-field-config.md`](lib/config/person-field-config.md) |
+| [`container-field-config.ts`](lib/config/container-field-config.ts) | `containers` | [`container-field-config.md`](lib/config/container-field-config.md) |
+| [`relationship-field-config.ts`](lib/config/relationship-field-config.ts) | `relationships` | [`relationship-field-config.md`](lib/config/relationship-field-config.md) |
+
+The document and person configs drive: search result table columns, filter sidebar groups, active filter pills, record/person detail display, query SELECT clauses, and filter option generation.
 
 ---
 

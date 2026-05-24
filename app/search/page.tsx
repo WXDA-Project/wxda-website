@@ -13,12 +13,12 @@ import {
   type PersonRow,
   type PersonSummary,
 } from '@/lib/queries'
-import { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, FILTER_FIELDS } from '@/lib/field-config'
+import { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, FILTER_FIELDS } from '@/lib/config/document-field-config'
 import {
   PERSON_TABLE_FIELDS,
   PERSON_FILTER_FIELDS,
   PERSON_MULTISELECT_FILTER_FIELDS,
-} from '@/lib/person-field-config'
+} from '@/lib/config/person-field-config'
 import SearchFilters from '@/components/SearchFilters'
 import Pagination from '@/components/Pagination'
 import TabNav from '@/components/TabNav'
