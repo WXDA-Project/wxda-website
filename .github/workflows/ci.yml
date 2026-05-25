@@ -71,14 +71,11 @@ jobs:
   # Only runs on pull requests — heavy Docker setup is not worth the cost on
   # every push to master. The unit, lint, and typecheck jobs still run on both.
   #
-  # supabase start applies all migrations and then runs supabase/seed.sql
-  # (db.seed.enabled = true in config.toml), which creates the admin@test.local
-  # test user used by config-propagation tests.
-  #
-  # The Supabase URL is fixed by config.toml (port 54321). The publishable key
-  # is extracted from `supabase status` after startup so no .env file needs to
-  # be committed. Both values are injected into GITHUB_ENV so the Next.js dev
-  # server (started by the Playwright webServer config) can read them.
+  # Two caches speed up repeat runs:
+  #   - Supabase Docker images: keyed on CLI version so the cache is invalidated
+  #     whenever the CLI ships new images. Saves the multi-GB Docker Hub pull.
+  #   - Playwright Chromium binary: keyed on package-lock.json. On a cache hit
+  #     only the OS system deps (fast apt install) need to run.
   e2e:
     name: E2E tests
     if: github.event_name == 'pull_request'
@@ -96,29 +93,63 @@ jobs:
         run: npm ci
 
       - name: Set up Supabase CLI
+        id: supabase-cli
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
+      - name: Cache Supabase Docker images
+        id: supabase-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/supabase-images.tar
+          key: supabase-docker-${{ runner.os }}-${{ steps.supabase-cli.outputs.version }}
+
+      - name: Load cached Supabase images
+        if: steps.supabase-cache.outputs.cache-hit == 'true'
+        run: docker load --input /tmp/supabase-images.tar
+
       - name: Start local Supabase
         run: supabase start
 
+      - name: Save Supabase Docker images
+        if: steps.supabase-cache.outputs.cache-hit != 'true'
+        run: |
+          docker save \
+            $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -v "<none>") \
+            --output /tmp/supabase-images.tar
+
       - name: Export Supabase env vars
         run: |
-          PUBLISHABLE_KEY=$(supabase status | grep -i 'publishable key' | awk '{print $NF}')
-          # Fall back to anon key if this CLI version predates the publishable key format.
+          # -o env prints KEY=value pairs — more reliable than grepping human-readable output.
+          SUPABASE_ENV=$(supabase status -o env 2>/dev/null)
+          PUBLISHABLE_KEY=$(echo "$SUPABASE_ENV" | grep '^PUBLISHABLE_KEY=' | cut -d= -f2-)
+          # Fall back to ANON_KEY for CLI versions that predate the publishable key format.
           if [ -z "$PUBLISHABLE_KEY" ]; then
-            PUBLISHABLE_KEY=$(supabase status | grep -i 'anon key' | awk '{print $NF}')
+            PUBLISHABLE_KEY=$(echo "$SUPABASE_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
           fi
           if [ -z "$PUBLISHABLE_KEY" ]; then
-            echo "ERROR: could not extract Supabase publishable/anon key from \`supabase status\`" >&2
+            echo "ERROR: could not extract key. supabase status -o env output:" >&2
+            echo "$SUPABASE_ENV" >&2
             exit 1
           fi
           echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY" >> $GITHUB_ENV
 
-      - name: Install Playwright browsers
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright with deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: Run E2E tests
         run: npm run test:e2e
