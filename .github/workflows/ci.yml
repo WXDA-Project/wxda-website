@@ -101,18 +101,17 @@ jobs:
         run: |
           # -o env prints KEY=value pairs — more reliable than grepping human-readable output.
           SUPABASE_ENV=$(supabase status -o env 2>/dev/null)
-          PUBLISHABLE_KEY=$(echo "$SUPABASE_ENV" | grep '^PUBLISHABLE_KEY=' | cut -d= -f2-)
-          # Fall back to ANON_KEY for CLI versions that predate the publishable key format.
-          if [ -z "$PUBLISHABLE_KEY" ]; then
-            PUBLISHABLE_KEY=$(echo "$SUPABASE_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
-          fi
-          if [ -z "$PUBLISHABLE_KEY" ]; then
-            echo "ERROR: could not extract key. supabase status -o env output:" >&2
+          # Use ANON_KEY (a JWT) not PUBLISHABLE_KEY (sb_publishable_... format).
+          # Local PostgREST only validates JWT bearer tokens; the cloud publishable
+          # key format is rejected with "Expected 3 parts in JWT; got 1".
+          ANON_KEY=$(echo "$SUPABASE_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
+          if [ -z "$ANON_KEY" ]; then
+            echo "ERROR: could not extract ANON_KEY. supabase status -o env output:" >&2
             echo "$SUPABASE_ENV" >&2
             exit 1
           fi
           echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
 
       - name: Cache Playwright browsers
         id: playwright-cache
