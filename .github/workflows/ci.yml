@@ -112,6 +112,10 @@ jobs:
           fi
           echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
+          # Also write .env.test so playwright.config.ts picks it up via dotenv.config().
+          # next dev inlines NEXT_PUBLIC_ vars at compile time and doesn't reliably
+          # pick them up from webServer.env alone.
+          printf 'NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\nNEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$ANON_KEY" > .env.test
 
       - name: Cache Playwright browsers
         id: playwright-cache
