@@ -1,11 +1,3 @@
-import { DOC_TITLE_KEY, DOC_NAME_TITLE_KEY } from '../config/document-field-config'
-import { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY } from '../config/person-field-config'
-import {
-  CONTAINER_NAME_TITLE_KEY,
-  CONTAINER_SHORT_NAME_KEY,
-  CONTAINER_TITLE_KEY,
-} from '../config/container-field-config'
-
 export const PAGE_SIZE = 20
 
 // ── Row types ──────────────────────────────────────────────────────────────
@@ -16,33 +8,46 @@ export interface PersonSummary { id: number; [key: string]: unknown }
 export interface ContainerSummary { id: number; [key: string]: unknown }
 
 // ── Display helpers ────────────────────────────────────────────────────────
+// Each function accepts a keys object so callers can pass the awaited config
+// directly without these functions needing async DB access themselves.
 
-export function containerDisplayName(c: ContainerSummary, id?: number | string): string {
+export function containerDisplayName(
+  c: ContainerSummary,
+  keys: { CONTAINER_NAME_TITLE_KEY: string; CONTAINER_SHORT_NAME_KEY: string; CONTAINER_TITLE_KEY: string },
+  id?: number | string,
+): string {
   return (
-    (c[CONTAINER_NAME_TITLE_KEY] as string | null) ??
-    (c[CONTAINER_SHORT_NAME_KEY] as string | null) ??
-    (c[CONTAINER_TITLE_KEY] as string | null) ??
+    (c[keys.CONTAINER_NAME_TITLE_KEY] as string | null) ??
+    (c[keys.CONTAINER_SHORT_NAME_KEY] as string | null) ??
+    (c[keys.CONTAINER_TITLE_KEY] as string | null) ??
     (id != null ? `Publication #${id}` : 'Publication')
   )
 }
 
-export function documentDisplayTitle(doc: Record<string, unknown>, id?: number | string): string {
-  const nameTitleRaw = doc[DOC_NAME_TITLE_KEY]
+export function documentDisplayTitle(
+  doc: Record<string, unknown>,
+  keys: { DOC_NAME_TITLE_KEY: string; DOC_TITLE_KEY: string },
+  id?: number | string,
+): string {
+  const nameTitleRaw = doc[keys.DOC_NAME_TITLE_KEY]
   const nameTitle = Array.isArray(nameTitleRaw)
     ? (nameTitleRaw as string[])[0] ?? null
     : (nameTitleRaw as string | null)
-  const title = doc[DOC_TITLE_KEY] as string | null
+  const title = doc[keys.DOC_TITLE_KEY] as string | null
   return nameTitle || title || (id != null ? `Record #${id}` : 'Record')
 }
 
-export function personDisplayName(p: PersonSummary): string {
-  const givenNames = p[PERSON_SORT_KEY] as string | null
-  const nameTitleRaw = p[PERSON_NAME_TITLE_KEY]
+export function personDisplayName(
+  p: PersonSummary,
+  keys: { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string },
+): string {
+  const givenNames = p[keys.PERSON_SORT_KEY] as string | null
+  const nameTitleRaw = p[keys.PERSON_NAME_TITLE_KEY]
   const surname = Array.isArray(nameTitleRaw)
     ? (nameTitleRaw as string[])[0]
     : (nameTitleRaw as string | null)
   if (givenNames && surname) return `${givenNames} ${surname}`
   if (givenNames) return givenNames
   if (surname) return surname
-  return (p[PERSON_TITLE_KEY] as string | null) ?? `Person #${p.id}`
+  return (p[keys.PERSON_TITLE_KEY] as string | null) ?? `Person #${p.id}`
 }

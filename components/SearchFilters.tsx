@@ -1,8 +1,8 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { FILTER_FIELDS, DATE_FILTER_FIELD, type FieldConfig } from '@/lib/config/document-field-config'
+import { useState } from 'react'
+import type { FieldConfig } from '@/lib/config/db-config'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -136,14 +136,18 @@ function MultiselectGroup({
 function DateRangeGroup({
   dateFrom,
   dateTo,
+  minDate,
+  maxDate,
   onChange,
 }: {
   dateFrom: string
   dateTo: string
+  minDate: string
+  maxDate: string
   onChange: (from: string, to: string) => void
 }) {
-  const MIN = DATE_FILTER_FIELD.minDate!
-  const MAX = DATE_FILTER_FIELD.maxDate!
+  const MIN = minDate
+  const MAX = maxDate
 
   return (
     <div className="border-b border-border pb-3">
@@ -196,26 +200,15 @@ function DateRangeGroup({
 // ── Main component ─────────────────────────────────────────────────────────
 
 interface SearchFiltersProps {
-  /**
-   * All filterable fields for the current search tab (date-range + multiselect).
-   * Defaults to the document FILTER_FIELDS when not provided.
-   * Pass PERSON_FILTER_FIELDS for the persons tab.
-   */
-  filterFields?: FieldConfig[]
-  /**
-   * URL tab parameter to preserve when building filter URLs.
-   * Omit for the records tab (default). Pass 'persons' for the persons tab.
-   */
+  filterFields: FieldConfig[]
+  dateFilterField?: FieldConfig
   tab?: string
-  /**
-   * Distinct option values for every multiselect filter, keyed by paramKey.
-   * Fetched server-side from the database and passed as a prop.
-   */
   filterOptions: Record<string, string[]>
 }
 
 export default function SearchFilters({
-  filterFields = FILTER_FIELDS,
+  filterFields,
+  dateFilterField,
   tab,
   filterOptions,
 }: SearchFiltersProps) {
@@ -226,17 +219,18 @@ export default function SearchFilters({
   const hasDateRange = filterFields.some((f) => f.filterType === 'date-range')
   const multiselectFields = filterFields.filter((f) => f.filterType === 'multiselect')
 
+  const spStr = searchParams.toString()
+  const [prevSpStr, setPrevSpStr] = useState(spStr)
   const [draft, setDraft] = useState<FilterDraft>(() =>
     draftFromParams(searchParams, multiselectFields),
   )
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Re-sync draft when URL changes externally (pill X clicks, clear all, tab switches)
-  const spStr = searchParams.toString()
-  useEffect(() => {
+  if (prevSpStr !== spStr) {
+    setPrevSpStr(spStr)
     setDraft(draftFromParams(searchParams, multiselectFields))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spStr])
+  }
 
   const urlDraft = draftFromParams(searchParams, multiselectFields)
   const activeCount = countActive(urlDraft)
@@ -316,11 +310,13 @@ export default function SearchFilters({
         </div>
 
         {/* Date range — only shown when the field config includes a date-range filter */}
-        {hasDateRange && (
+        {hasDateRange && dateFilterField && (
           <div className="pt-0">
             <DateRangeGroup
               dateFrom={draft.date_from}
               dateTo={draft.date_to}
+              minDate={dateFilterField.minDate!}
+              maxDate={dateFilterField.maxDate!}
               onChange={(from, to) => setDraft((d) => ({ ...d, date_from: from, date_to: to }))}
             />
           </div>

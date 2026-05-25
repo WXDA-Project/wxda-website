@@ -1,34 +1,11 @@
 import { supabase } from '../supabase'
-import {
-  FTS_COLUMN,
-  VISIBILITY_COLUMN,
-  SORT_DATE_KEY,
-  AUTHOR_FIELD_KEY,
-  DOC_SUMMARY_COLUMNS,
-} from '../config/document-field-config'
-import {
-  PERSON_TABLE_FIELDS,
-  PERSON_MULTISELECT_FILTER_FIELDS,
-  PERSON_SORT_KEY,
-  PERSON_ENRICHMENT_COLUMNS,
-} from '../config/person-field-config'
-import { RELATIONSHIP_SOURCE_KEY, RELATIONSHIP_TARGET_KEY } from '../config/relationship-field-config'
+import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getPersonConfig, getRelationshipConfig } from '../config/db-config'
 import { PAGE_SIZE, PersonRow, PersonSummary } from './types'
-
-// ── Column sets ────────────────────────────────────────────────────────────
-
-const PERSON_SEARCH_COLUMNS = [
-  ...new Set(['id', ...PERSON_ENRICHMENT_COLUMNS.split(', '), ...PERSON_TABLE_FIELDS.map((f) => f.key)]),
-].join(', ')
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface PersonSearchParams {
   q?: string
-  /**
-   * Map of paramKey → selected values for every multiselect filter.
-   * Keys match the `paramKey` fields in person-field-config.ts.
-   */
   filters?: Record<string, string[]>
   page?: number
 }
@@ -44,6 +21,13 @@ export interface PersonSearchResult {
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export async function searchPersons(params: PersonSearchParams): Promise<PersonSearchResult> {
+  const { PERSON_TABLE_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_SORT_KEY, PERSON_ENRICHMENT_COLUMNS } =
+    await getPersonConfig()
+
+  const PERSON_SEARCH_COLUMNS = [
+    ...new Set(['id', ...PERSON_ENRICHMENT_COLUMNS.split(', '), ...PERSON_TABLE_FIELDS.map((f) => f.key)]),
+  ].join(', ')
+
   const page = Math.max(1, params.page ?? 1)
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -57,8 +41,6 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
     query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
   }
 
-  // Apply multiselect filters generically from person-field-config.
-  // Array columns use overlaps(); scalar columns use in().
   for (const field of PERSON_MULTISELECT_FILTER_FIELDS) {
     const values = params.filters?.[field.paramKey!] ?? []
     if (values.length > 0) {
@@ -98,6 +80,9 @@ export async function getPersonDocuments(personId: number): Promise<{
   mentioned: Record<string, unknown>[]
   authored: Record<string, unknown>[]
 }> {
+  const [{ DOC_SUMMARY_COLUMNS, AUTHOR_FIELD_KEY, SORT_DATE_KEY }, { RELATIONSHIP_SOURCE_KEY, RELATIONSHIP_TARGET_KEY }] =
+    await Promise.all([getDocumentConfig(), getRelationshipConfig()])
+
   const { data: rels } = await supabase
     .from('relationships')
     .select(RELATIONSHIP_SOURCE_KEY)
@@ -105,8 +90,8 @@ export async function getPersonDocuments(personId: number): Promise<{
 
   const mentionedDocIds = [
     ...new Set(
-      (rels ?? [])
-        .map((r: Record<string, string>) => Number(r[RELATIONSHIP_SOURCE_KEY]))
+      ((rels ?? []) as unknown as Record<string, string>[])
+        .map((r) => Number(r[RELATIONSHIP_SOURCE_KEY]))
         .filter((n) => Number.isFinite(n) && n > 0),
     ),
   ]
@@ -141,5 +126,4 @@ export async function getPersonDocuments(personId: number): Promise<{
   }
 }
 
-// Re-export PersonSummary so callers only need to import from queries/persons if needed
 export type { PersonSummary }
