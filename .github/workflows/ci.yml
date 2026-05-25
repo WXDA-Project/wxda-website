@@ -71,11 +71,8 @@ jobs:
   # Only runs on pull requests — heavy Docker setup is not worth the cost on
   # every push to master. The unit, lint, and typecheck jobs still run on both.
   #
-  # Two caches speed up repeat runs:
-  #   - Supabase Docker images: keyed on CLI version so the cache is invalidated
-  #     whenever the CLI ships new images. Saves the multi-GB Docker Hub pull.
-  #   - Playwright Chromium binary: keyed on package-lock.json. On a cache hit
-  #     only the OS system deps (fast apt install) need to run.
+  # Playwright Chromium binary is cached on package-lock.json. On a cache hit
+  # only the OS system deps (fast apt install) need to run.
   e2e:
     name: E2E tests
     if: github.event_name == 'pull_request'
@@ -93,31 +90,12 @@ jobs:
         run: npm ci
 
       - name: Set up Supabase CLI
-        id: supabase-cli
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Cache Supabase Docker images
-        id: supabase-cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/supabase-images.tar
-          key: supabase-docker-${{ runner.os }}-${{ steps.supabase-cli.outputs.version }}
-
-      - name: Load cached Supabase images
-        if: steps.supabase-cache.outputs.cache-hit == 'true'
-        run: docker load --input /tmp/supabase-images.tar
-
       - name: Start local Supabase
         run: supabase start
-
-      - name: Save Supabase Docker images
-        if: steps.supabase-cache.outputs.cache-hit != 'true'
-        run: |
-          docker save \
-            $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -v "<none>") \
-            --output /tmp/supabase-images.tar
 
       - name: Export Supabase env vars
         run: |
