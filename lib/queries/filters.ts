@@ -1,11 +1,10 @@
-import { unstable_cache } from 'next/cache'
+import { cacheLife } from 'next/cache'
 import { supabase } from '../supabase'
-import { MULTISELECT_FILTER_FIELDS, VISIBILITY_COLUMN } from '../config/document-field-config'
-import { PERSON_MULTISELECT_FILTER_FIELDS } from '../config/person-field-config'
+import { VISIBILITY_COLUMN, getDocumentConfig, getPersonConfig } from '../config/db-config'
 
 async function fetchFilterOptions(
   table: 'documents' | 'persons',
-  fields: Array<{ key: string; isArray?: boolean; paramKey?: string }>,
+  fields: Array<{ key: string; isArray?: boolean; paramKey?: string | null }>,
 ): Promise<Record<string, string[]>> {
   const results = await Promise.all(
     fields.map(async (field) => {
@@ -24,16 +23,16 @@ async function fetchFilterOptions(
   return Object.fromEntries(results)
 }
 
-/** Distinct values for all document multiselect filters, cached for 1 hour. */
-export const getDocumentFilterOptions = unstable_cache(
-  () => fetchFilterOptions('documents', MULTISELECT_FILTER_FIELDS),
-  ['wxda-document-filter-options'],
-  { revalidate: 3600 },
-)
+export async function getDocumentFilterOptions(): Promise<Record<string, string[]>> {
+  'use cache'
+  cacheLife('hours')
+  const { MULTISELECT_FILTER_FIELDS } = await getDocumentConfig()
+  return fetchFilterOptions('documents', MULTISELECT_FILTER_FIELDS)
+}
 
-/** Distinct values for all person multiselect filters, cached for 1 hour. */
-export const getPersonFilterOptions = unstable_cache(
-  () => fetchFilterOptions('persons', PERSON_MULTISELECT_FILTER_FIELDS),
-  ['wxda-person-filter-options'],
-  { revalidate: 3600 },
-)
+export async function getPersonFilterOptions(): Promise<Record<string, string[]>> {
+  'use cache'
+  cacheLife('hours')
+  const { PERSON_MULTISELECT_FILTER_FIELDS } = await getPersonConfig()
+  return fetchFilterOptions('persons', PERSON_MULTISELECT_FILTER_FIELDS)
+}

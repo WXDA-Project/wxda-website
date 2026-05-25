@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Cancel in-progress runs for the same ref so a new push to a PR doesn't
+# queue behind the previous one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Unit tests (Jest) ──────────────────────────────────────────────────────
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+  # ── Lint (ESLint) ──────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  # ── Type check (TypeScript) ────────────────────────────────────────────────
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tsc
+        run: npx tsc --noEmit
+
+  # ── E2E tests (Playwright + local Supabase) ────────────────────────────────
+  #
+  # Only runs on pull requests — heavy Docker setup is not worth the cost on
+  # every push to master. The unit, lint, and typecheck jobs still run on both.
+  #
+  # supabase start applies all migrations and then runs supabase/seed.sql
+  # (db.seed.enabled = true in config.toml), which creates the admin@test.local
+  # test user used by config-propagation tests.
+  #
+  # The Supabase URL is fixed by config.toml (port 54321). The publishable key
+  # is extracted from `supabase status` after startup so no .env file needs to
+  # be committed. Both values are injected into GITHUB_ENV so the Next.js dev
+  # server (started by the Playwright webServer config) can read them.
+  e2e:
+    name: E2E tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Export Supabase env vars
+        run: |
+          PUBLISHABLE_KEY=$(supabase status | grep -i 'publishable key' | awk '{print $NF}')
+          # Fall back to anon key if this CLI version predates the publishable key format.
+          if [ -z "$PUBLISHABLE_KEY" ]; then
+            PUBLISHABLE_KEY=$(supabase status | grep -i 'anon key' | awk '{print $NF}')
+          fi
+          if [ -z "$PUBLISHABLE_KEY" ]; then
+            echo "ERROR: could not extract Supabase publishable/anon key from \`supabase status\`" >&2
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY" >> $GITHUB_ENV
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

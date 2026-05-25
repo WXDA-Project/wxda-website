@@ -47,9 +47,14 @@ function SidebarContent({ pin, onClose }: { pin: MapPin; onClose: () => void }) 
             <p className="text-[11px] text-muted mb-1 tabular-nums">
               {doc.date ? doc.date.slice(0, 4) : '—'}
             </p>
-            <p className="text-sm text-ink leading-snug mb-2 line-clamp-3">
+            <p className="text-sm font-medium text-ink leading-snug mb-1 line-clamp-2">
               {doc.title ?? `Record #${doc.id}`}
             </p>
+            {doc.summary && (
+              <p className="text-xs text-muted leading-snug mb-2 line-clamp-3">
+                {doc.summary}
+              </p>
+            )}
             <Link href={`/record/${doc.id}`} className="text-xs font-semibold">
               View record →
             </Link>
@@ -72,7 +77,9 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
 
   // Read by the async init callback so it always sees the latest value.
   const modeRef = useRef<'pins' | 'heatmap'>('pins')
-  modeRef.current = mode
+  useEffect(() => {
+    modeRef.current = mode
+  })
 
   // ── Map initialisation ────────────────────────────────────────────────────
 

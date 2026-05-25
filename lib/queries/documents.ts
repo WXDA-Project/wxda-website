@@ -1,42 +1,13 @@
 import { supabase } from '../supabase'
-import {
-  UNIQUE_FIELDS,
-  TABLE_FIELDS,
-  MULTISELECT_FILTER_FIELDS,
-  FTS_COLUMN,
-  VISIBILITY_COLUMN,
-  SORT_DATE_KEY,
-  AUTHOR_FIELD_KEY,
-  DOC_SUMMARY_COLUMNS,
-} from '../config/document-field-config'
-import { PERSON_ENRICHMENT_COLUMNS } from '../config/person-field-config'
-import { CONTAINER_SELECT_COLUMNS } from '../config/container-field-config'
-import {
-  RELATIONSHIP_SOURCE_KEY,
-  RELATIONSHIP_TARGET_KEY,
-  RELATIONSHIP_TYPE_KEY,
-} from '../config/relationship-field-config'
+import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getPersonConfig, getContainerConfig, getRelationshipConfig } from '../config/db-config'
 import { PAGE_SIZE, DocumentRow, PersonSummary, ContainerSummary } from './types'
-
-// ── Column sets ────────────────────────────────────────────────────────────
-
-const ALL_DOC_COLUMNS = [...UNIQUE_FIELDS.map((f) => f.key), 'id', VISIBILITY_COLUMN].join(', ')
-const TABLE_COLUMNS = [...new Set(['id', ...TABLE_FIELDS.map((f) => f.key)])].join(', ')
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface SearchParams {
   q?: string
-  /** ISO date string e.g. "1790-06-01" */
   date_from?: string
-  /** ISO date string e.g. "1848-12-31" */
   date_to?: string
-  /**
-   * Map of paramKey → selected values for every multiselect filter.
-   * Keys match the `paramKey` fields defined in field-config.ts.
-   * Adding a new multiselect filter to the config automatically
-   * applies it here — no code changes required.
-   */
   filters?: Record<string, string[]>
   page?: number
 }
@@ -58,6 +29,10 @@ export interface DocumentEnrichment {
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export async function searchDocuments(params: SearchParams): Promise<SearchResult> {
+  const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
+
+  const TABLE_COLUMNS = [...new Set(['id', ...TABLE_FIELDS.map((f) => f.key)])].join(', ')
+
   const page = Math.max(1, params.page ?? 1)
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -74,8 +49,6 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
   if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
   if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
 
-  // Apply all multiselect filters generically from the field config.
-  // To add a new filter, add it to FIELDS in field-config.ts — nothing else needed here.
   for (const field of MULTISELECT_FILTER_FIELDS) {
     const values = params.filters?.[field.paramKey!] ?? []
     if (values.length > 0) query = query.overlaps(field.key, values)
@@ -97,6 +70,9 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
 }
 
 export async function getDocument(id: number): Promise<Record<string, unknown> | null> {
+  const { FIELDS } = await getDocumentConfig()
+  const ALL_DOC_COLUMNS = [...new Set([...FIELDS.map((f) => f.key), 'id', VISIBILITY_COLUMN])].join(', ')
+
   const { data, error } = await supabase
     .from('documents')
     .select(ALL_DOC_COLUMNS)
@@ -108,15 +84,14 @@ export async function getDocument(id: number): Promise<Record<string, unknown> |
   return data as unknown as Record<string, unknown>
 }
 
-/**
- * Fetch enrichment data (authors, container, mentioned persons) for a document.
- * Called after getDocument so we can pass the already-resolved field values.
- */
 export async function getDocumentEnrichment(
   authorIds: string[],
   containerId: string | null,
   documentId: number,
 ): Promise<DocumentEnrichment> {
+  const [{ PERSON_ENRICHMENT_COLUMNS }, { CONTAINER_SELECT_COLUMNS }, { RELATIONSHIP_SOURCE_KEY, RELATIONSHIP_TARGET_KEY, RELATIONSHIP_TYPE_KEY }] =
+    await Promise.all([getPersonConfig(), getContainerConfig(), getRelationshipConfig()])
+
   const numericAuthorIds = authorIds
     .map(Number)
     .filter((n) => Number.isFinite(n) && n > 0)
@@ -155,7 +130,7 @@ export async function getDocumentEnrichment(
   let mentionedPersons: DocumentEnrichment['mentionedPersons'] = []
 
   if (relsRes.status === 'fulfilled' && relsRes.value.data) {
-    const rels = relsRes.value.data as Record<string, string>[]
+    const rels = relsRes.value.data as unknown as Record<string, string>[]
 
     const personIds = [
       ...new Set(
@@ -188,10 +163,8 @@ export async function getDocumentEnrichment(
   return { authors, container, mentionedPersons }
 }
 
-// ── Timeline queries ───────────────────────────────────────────────────────
-
-/** All public document dates — used as the grey context layer in the timeline chart. */
 export async function getArchiveDates(): Promise<(string | null)[]> {
+  const { SORT_DATE_KEY } = await getDocumentConfig()
   const { data } = await supabase
     .from('documents')
     .select(SORT_DATE_KEY)
@@ -199,14 +172,11 @@ export async function getArchiveDates(): Promise<(string | null)[]> {
   return (data as unknown as Record<string, string | null>[] ?? []).map((d) => d[SORT_DATE_KEY])
 }
 
-/**
- * Dates for documents matching the supplied filters — used as the crimson
- * foreground layer. Mirrors the filter logic in searchDocuments but selects
- * only the date column and applies no pagination.
- */
 export async function searchDocumentDates(
   params: Omit<SearchParams, 'page'>,
 ): Promise<(string | null)[]> {
+  const { MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
+
   let query = supabase
     .from('documents')
     .select(SORT_DATE_KEY)

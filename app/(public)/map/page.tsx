@@ -2,8 +2,6 @@ import type { Metadata } from 'next'
 import { getMapPins } from '@/lib/queries'
 import DocumentMap from '@/components/DocumentMap'
 
-export const dynamic = 'force-dynamic'
-
 export const metadata: Metadata = { title: 'Map' }
 
 export default async function MapPage() {
