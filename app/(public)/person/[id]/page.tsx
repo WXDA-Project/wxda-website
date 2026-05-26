@@ -2,8 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPerson, getPersonDocuments, personDisplayName, documentDisplayTitle, type PersonSummary } from '@/lib/queries'
-import { PERSON_DETAIL_FIELDS, PERSON_BADGE_FIELDS, PERSON_SUMMARY_KEY } from '@/lib/config/person-field-config'
-import { SORT_DATE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY } from '@/lib/config/document-field-config'
+import { getPersonConfig, getDocumentConfig } from '@/lib/config/db-config'
 import DownloadPdfButton, { type PdfDoc, type PdfSection } from '@/components/DownloadPdfButton'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -29,14 +28,19 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const person = await getPerson(Number(id))
+  const [person, { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }] = await Promise.all([
+    getPerson(Number(id)),
+    getPersonConfig(),
+  ])
   if (!person) return { title: 'Person Not Found' }
-  return { title: personDisplayName(person as unknown as PersonSummary) }
+  return { title: personDisplayName(person as unknown as PersonSummary, { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }) }
 }
 
 // ── Document list ──────────────────────────────────────────────────────────
 
-function DocumentList({ docs }: { docs: Record<string, unknown>[] }) {
+type DocKeys = { DOC_NAME_TITLE_KEY: string; DOC_TITLE_KEY: string; SORT_DATE_KEY: string; DOC_SUMMARY_KEY: string; DOC_CATEGORY_KEY: string }
+
+function DocumentList({ docs, docKeys }: { docs: Record<string, unknown>[]; docKeys: DocKeys }) {
   if (docs.length === 0) {
     return (
       <p className="text-sm text-muted">
@@ -47,10 +51,10 @@ function DocumentList({ docs }: { docs: Record<string, unknown>[] }) {
   return (
     <ul className="space-y-3 list-none p-0 m-0">
       {docs.map((doc) => {
-        const displayTitle = documentDisplayTitle(doc, doc.id as number)
-        const summary = doc[DOC_SUMMARY_KEY] as string | null
-        const dateStr = doc[SORT_DATE_KEY] as string | null
-        const categories = doc[DOC_CATEGORY_KEY] as string[] | null
+        const displayTitle = documentDisplayTitle(doc, docKeys)
+        const summary = doc[docKeys.DOC_SUMMARY_KEY] as string | null
+        const dateStr = doc[docKeys.SORT_DATE_KEY] as string | null
+        const categories = doc[docKeys.DOC_CATEGORY_KEY] as string[] | null
 
         return (
           <li
@@ -97,12 +101,25 @@ export default async function PersonPage({
   const { id } = await params
   const numId = Number(id)
 
-  const [person, docs] = await Promise.all([getPerson(numId), getPersonDocuments(numId)])
+  const [
+    [person, docs],
+    {
+      PERSON_DETAIL_FIELDS, PERSON_BADGE_FIELDS, PERSON_SUMMARY_KEY,
+      PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY,
+    },
+    { SORT_DATE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY, DOC_NAME_TITLE_KEY, DOC_TITLE_KEY },
+  ] = await Promise.all([
+    Promise.all([getPerson(numId), getPersonDocuments(numId)]),
+    getPersonConfig(),
+    getDocumentConfig(),
+  ])
 
   if (!person) notFound()
 
   const p = person as PersonSummary
-  const name = personDisplayName(p)
+  const personKeys = { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }
+  const docKeys: DocKeys = { DOC_NAME_TITLE_KEY, DOC_TITLE_KEY, SORT_DATE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY }
+  const name = personDisplayName(p, personKeys)
 
   // ── Build PDF document ────────────────────────────────────────────────────
   const pdfSections: PdfSection[] = []
@@ -122,7 +139,7 @@ export default async function PersonPage({
     pdfSections.push({
       heading: `Mentioned in ${docs.mentioned.length} Record${docs.mentioned.length !== 1 ? 's' : ''}`,
       rows: docs.mentioned.map((doc) => {
-        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const displayTitle = documentDisplayTitle(doc, docKeys)
         const dateStr = doc[SORT_DATE_KEY] as string | null
         return { label: dateStr ? formatDate(dateStr) : '', value: displayTitle }
       }),
@@ -132,7 +149,7 @@ export default async function PersonPage({
     pdfSections.push({
       heading: `Author / Creator of ${docs.authored.length} Record${docs.authored.length !== 1 ? 's' : ''}`,
       rows: docs.authored.map((doc) => {
-        const displayTitle = documentDisplayTitle(doc, doc.id as number)
+        const displayTitle = documentDisplayTitle(doc, docKeys)
         const dateStr = doc[SORT_DATE_KEY] as string | null
         return { label: dateStr ? formatDate(dateStr) : '', value: displayTitle }
       }),
@@ -176,7 +193,7 @@ export default async function PersonPage({
             {name}
           </h1>
 
-          {/* Badges — driven by person-field-config PERSON_BADGE_FIELDS */}
+          {/* Badges — driven by PERSON_BADGE_FIELDS */}
           <div className="flex flex-wrap gap-2 mt-2">
             {PERSON_BADGE_FIELDS.flatMap((field, fi) => {
               const val = p[field.key]
@@ -231,7 +248,7 @@ export default async function PersonPage({
           <h2 className="text-xs font-bold uppercase tracking-widest mb-4 text-muted">
             Mentioned in {docs.mentioned.length > 0 ? `${docs.mentioned.length} Record${docs.mentioned.length !== 1 ? 's' : ''}` : 'Records'}
           </h2>
-          <DocumentList docs={docs.mentioned} />
+          <DocumentList docs={docs.mentioned} docKeys={docKeys} />
         </div>
 
         {/* ── Documents authored by this person ──────────────────────────── */}
@@ -240,7 +257,7 @@ export default async function PersonPage({
             <h2 className="text-xs font-bold uppercase tracking-widest mb-4 text-muted">
               Author / Creator of {docs.authored.length} Record{docs.authored.length !== 1 ? 's' : ''}
             </h2>
-            <DocumentList docs={docs.authored} />
+            <DocumentList docs={docs.authored} docKeys={docKeys} />
           </div>
         )}
       </article>

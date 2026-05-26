@@ -1,25 +1,18 @@
 import { supabase } from '../supabase'
-import {
-  VISIBILITY_COLUMN,
-  SORT_DATE_KEY,
-  LOCATION_FIELD_KEY,
-  DOC_TITLE_KEY,
-  DOC_NAME_TITLE_KEY,
-} from '../config/document-field-config'
+import { VISIBILITY_COLUMN, getDocumentConfig } from '../config/db-config'
 import { documentDisplayTitle } from './types'
-
-// ── Types ──────────────────────────────────────────────────────────────────
 
 export interface MapPin {
   location: string
   lat: number
   lng: number
-  documents: Array<{ id: number; title: string; date: string | null }>
+  documents: Array<{ id: number; title: string; date: string | null; summary: string | null }>
 }
 
-// ── Query ──────────────────────────────────────────────────────────────────
-
 export async function getMapPins(): Promise<MapPin[]> {
+  const { SORT_DATE_KEY, LOCATION_FIELD_KEY, DOC_TITLE_KEY, DOC_NAME_TITLE_KEY, DOC_SUMMARY_KEY } =
+    await getDocumentConfig()
+
   const [geocodesRes, docsRes] = await Promise.allSettled([
     supabase
       .from('geocode_cache')
@@ -28,7 +21,7 @@ export async function getMapPins(): Promise<MapPin[]> {
 
     supabase
       .from('documents')
-      .select(`id, ${DOC_TITLE_KEY}, ${DOC_NAME_TITLE_KEY}, ${SORT_DATE_KEY}, ${LOCATION_FIELD_KEY}`)
+      .select(`id, ${DOC_TITLE_KEY}, ${DOC_NAME_TITLE_KEY}, ${DOC_SUMMARY_KEY}, ${SORT_DATE_KEY}, ${LOCATION_FIELD_KEY}`)
       .eq(VISIBILITY_COLUMN, 'public')
       .not(LOCATION_FIELD_KEY, 'is', null),
   ])
@@ -40,6 +33,7 @@ export async function getMapPins(): Promise<MapPin[]> {
   }[]
   const docs = (docsRes.value.data ?? []) as unknown as Record<string, unknown>[]
 
+  const keys = { DOC_NAME_TITLE_KEY, DOC_TITLE_KEY }
   const pinMap = new Map<string, MapPin>()
   for (const g of geocodes) {
     pinMap.set(g.location, { location: g.location, lat: g.lat, lng: g.lng, documents: [] })
@@ -50,8 +44,9 @@ export async function getMapPins(): Promise<MapPin[]> {
       const pin = pinMap.get(loc)
       if (pin) pin.documents.push({
         id: doc.id as number,
-        title: documentDisplayTitle(doc, doc.id as number),
+        title: documentDisplayTitle(doc, keys, doc.id as number),
         date: doc[SORT_DATE_KEY] as string | null,
+        summary: doc[DOC_SUMMARY_KEY] as string | null,
       })
     }
   }

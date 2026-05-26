@@ -1,5 +1,7 @@
 # WXDA Website
 
+[![CI](https://github.com/AndyX07/wxda-website/actions/workflows/ci.yml/badge.svg)](https://github.com/AndyX07/wxda-website/actions/workflows/ci.yml)
+
 A digital archive and research tool for historical records related to women's cross-dressing in eighteenth and nineteenth-century Britain. The site provides full-text search, faceted filtering, an interactive map, and structured person profiles drawn from a curated Supabase database.
 
 ## Tech Stack
@@ -10,6 +12,7 @@ A digital archive and research tool for historical records related to women's cr
 | Database | Supabase (PostgreSQL + Row Level Security) |
 | Styling | Tailwind CSS v4 with a custom design token layer |
 | Map | Leaflet + leaflet.markercluster + leaflet.heat |
+| Auth | `@supabase/ssr` (browser + server clients, session refresh via `proxy.ts`) |
 | Hosting | Vercel (recommended) |
 
 ## Getting Started
@@ -19,12 +22,14 @@ A digital archive and research tool for historical records related to women's cr
 Create a `.env.local` file at the project root:
 
 ```
-SUPABASE_URL=https://<project>.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 ```
 
-- **`SUPABASE_URL`**: construct from your project ID — found in **Project Settings → General**. Format: `https://<project-id>.supabase.co`
-- **`SUPABASE_PUBLISHABLE_KEY`**: found in **Project Settings → API Keys**. Use the publishable key (format `sb_publishable_...`), not the legacy JWT anon key.
+- **`NEXT_PUBLIC_SUPABASE_URL`**: your project URL — found in **Project Settings → General**. Format: `https://<project-id>.supabase.co`
+- **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`**: found in **Project Settings → API Keys**. Use the publishable key (format `sb_publishable_...`), not the legacy JWT anon key.
+
+Both the server data client (`lib/supabase.ts`) and the auth clients (`lib/supabase/client.ts`, `lib/supabase/server.ts`) read from the same `NEXT_PUBLIC_` vars. `NEXT_PUBLIC_` variables are available server-side too, so no duplicate pair is needed.
 
 ### Development
 
@@ -40,62 +45,180 @@ npm run build
 npm start
 ```
 
+## Testing
+
+### Unit tests (Jest)
+
+Tests pure utility functions with no database or browser required.
+
+```bash
+npm test              # run once
+npm run test:watch    # watch mode
+npm run test:coverage # with coverage report
+```
+
+Unit tests live in `tests/unit/`. Currently covers all branches of the display helper functions in `lib/queries/types.ts` (`documentDisplayTitle`, `personDisplayName`, `containerDisplayName`).
+
+### E2E tests (Playwright)
+
+Tests the full application in a real browser. Playwright starts the dev server automatically if one isn't already running.
+
+```bash
+npm run test:e2e         # headless
+npm run test:e2e:ui      # Playwright UI mode (interactive, recommended for debugging)
+```
+
+E2E tests live in `tests/e2e/`:
+
+| File | What it tests |
+|---|---|
+| `public.spec.ts` | Home page, search (URL params, clear), map, record detail, persons search and detail, 404 |
+| `admin.spec.ts` | Auth redirect, login form, invalid credentials, tab switching, edit dialog |
+| `config-propagation.spec.ts` | Full round-trip: admin field change → cache invalidation → public page reflects change |
+
+#### Config propagation tests
+
+The propagation tests mutate live data and revert it. **Run these against a local Supabase instance, not production.** They use the test admin user seeded by `supabase/seed.sql` (`admin@test.local` / `TestPassword123!`):
+
+```bash
+npm run test:e2e -- tests/e2e/config-propagation.spec.ts
+```
+
+The suite runs in serial mode (each test reverts its own changes before the next starts) and covers all four config tables:
+
+| Test | Tab | Property | Public UI target |
+|---|---|---|---|
+| 1 | Documents | `label` | Search column header |
+| 2 | Documents | `show_in_table` | Search column visibility |
+| 3 | Documents | `filter_type` | Filter sidebar multiselect group |
+| 4 | Persons | `label` | Persons search column header |
+| 5 | Persons | `show_in_table` | Persons search column visibility |
+| 6 | Persons | `filter_type` | Persons filter sidebar multiselect group |
+| 7 | Containers | `sort_order` | Cache invalidation (page still renders) |
+| 8 | Relationships | add + delete row | Admin table round-trip |
+
+### Local Supabase (Docker)
+
+To test against an isolated local database instead of production:
+
+1. Make sure Docker is running
+2. Start the local Supabase stack:
+   ```bash
+   npx supabase start
+   ```
+3. Note the `API URL` and `publishable key` printed in the output
+4. Swap the values in `.env.local`:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key from supabase start>
+   ```
+5. Run tests as normal — they now hit the local DB
+6. Stop the stack when done: `npx supabase stop`
+
+The local stack applies all migrations in `supabase/migrations/` automatically on start. Production data does not carry over.
+
+### Continuous Integration
+
+The `.github/workflows/ci.yml` workflow runs on every push to `master` and on all pull requests. It has four jobs:
+
+| Job | Runs on | What it runs |
+|---|---|---|
+| `unit` | push + PR | `npm test` |
+| `lint` | push + PR | `npm run lint` |
+| `typecheck` | push + PR | `npx tsc --noEmit` |
+| `e2e` | PR only | `npm run test:e2e` |
+
+`unit`, `lint`, and `typecheck` run in parallel on every event. `e2e` is restricted to pull requests — the Docker setup required for a local Supabase stack is too heavy to run on every push to master.
+
+The e2e job starts the full local Supabase stack with `supabase start`, which applies migrations and seeds the test admin user from `supabase/seed.sql`. Playwright then starts the Next.js dev server automatically via its `webServer` config. No secrets or committed env files are required — the workflow extracts the Supabase credentials from `supabase status` after startup and fails loudly if the key cannot be found.
+
+The Playwright HTML report is uploaded as a workflow artifact on failure, so broken tests can be inspected without re-running locally.
+
 ## Project Structure
 
 ```
 wxda-website/
+├── proxy.ts                    # Session refresh proxy (replaces middleware.ts in Next.js 16)
+├── next.config.ts              # Next.js config (cacheComponents: true enables 'use cache')
 ├── app/
-│   ├── globals.css            # Tailwind config + design tokens (@theme inline)
-│   ├── layout.tsx             # Root layout (fonts, skip-nav, nav, footer)
-│   ├── page.tsx               # Homepage (hero, search bar, stats)
-│   ├── search/
-│   │   └── page.tsx           # Search results (records + persons tabs)
-│   ├── record/[id]/
-│   │   └── page.tsx           # Single record detail page
-│   ├── person/[id]/
-│   │   └── page.tsx           # Single person profile page
-│   └── map/
-│       └── page.tsx           # Interactive map page
+│   ├── globals.css             # Tailwind config + design tokens (@theme inline)
+│   ├── layout.tsx              # Root layout (fonts, HTML shell only)
+│   ├── (public)/               # Route group — public site (has header/footer layout)
+│   │   ├── layout.tsx          # Public nav header + footer
+│   │   ├── page.tsx            # Homepage (hero, search bar)
+│   │   ├── search/
+│   │   │   └── page.tsx        # Full-text + faceted search (records + persons tabs)
+│   │   ├── record/[id]/
+│   │   │   └── page.tsx        # Single record detail page
+│   │   ├── person/[id]/
+│   │   │   └── page.tsx        # Single person profile page
+│   │   └── map/
+│   │       └── page.tsx        # Interactive map page
+│   ├── admin/                  # Admin area (separate minimal layout, no public nav)
+│   │   ├── layout.tsx          # Admin header (WXDA Admin label + sign out)
+│   │   ├── login/
+│   │   │   ├── page.tsx        # Email/password login form
+│   │   │   └── actions.ts      # signIn server action
+│   │   └── fields/
+│   │       ├── page.tsx        # Field config editor (4-tab CRUD table)
+│   │       ├── actions.ts      # saveField, addField, deleteField server actions
+│   │       └── FieldsClient.tsx # Client component — edit dialog + table
+│   └── auth/
+│       └── signout/
+│           └── route.ts        # POST → signs out + redirects to /admin/login
 ├── components/
-│   ├── HomeSearchBar.tsx      # Keyword search bar on the homepage
-│   ├── SearchFilters.tsx      # Faceted filter sidebar (records + persons)
-│   ├── ActiveFilters.tsx      # Active filter pill strip
-│   ├── Pagination.tsx         # Page navigation
-│   ├── TabNav.tsx             # Records / Persons tab switcher
-│   ├── TimelineChart.tsx      # SVG timeline chart on search results
-│   └── DocumentMap.tsx        # Leaflet map with clustering + heatmap
+│   ├── HomeSearchBar.tsx        # Keyword search bar on the homepage
+│   ├── SearchFilters.tsx        # Faceted filter sidebar (records + persons)
+│   ├── ActiveFilters.tsx        # Active filter pill strip
+│   ├── Pagination.tsx           # Page navigation
+│   ├── TabNav.tsx               # Records / Persons tab switcher
+│   ├── TimelineChart.tsx        # SVG timeline chart on search results
+│   └── DocumentMap.tsx          # Leaflet map with clustering + heatmap
 ├── lib/
-│   ├── supabase.ts            # Supabase browser client singleton
-│   ├── config/                # Single source of truth for all DB column definitions
-│   │   ├── document-field-config.ts    # Documents table fields and derived constants
-│   │   ├── person-field-config.ts      # Persons table fields and derived constants
-│   │   ├── container-field-config.ts   # Containers table columns
-│   │   └── relationship-field-config.ts # Relationships table columns
-│   └── queries/               # All database queries, split by domain
-│       ├── index.ts           # Re-exports everything — import from '@/lib/queries'
-│       ├── types.ts           # Shared row interfaces and display helpers
-│       ├── documents.ts       # Document search, fetch, enrichment, timeline
-│       ├── persons.ts         # Person search, fetch, person-document links
-│       ├── map.ts             # Map pin query
-│       └── filters.ts         # Cached filter option generation
-└── public/                    # Static assets
+│   ├── supabase.ts              # Server-only public data client (anon key, no auth)
+│   ├── supabase/
+│   │   ├── client.ts           # Browser auth client (createBrowserClient)
+│   │   ├── server.ts           # Server auth client (createServerClient + cookies)
+│   │   └── proxy.ts            # updateSession() — refreshes auth token in proxy.ts
+│   ├── config/
+│   │   └── db-config.ts        # Runtime config layer — 4 cached async getters
+│   └── queries/                # All database queries, split by domain
+│       ├── index.ts            # Re-exports everything — import from '@/lib/queries'
+│       ├── types.ts            # Shared row interfaces and display helpers
+│       ├── documents.ts        # Document search, fetch, enrichment, timeline
+│       ├── persons.ts          # Person search, fetch, person-document links
+│       ├── map.ts              # Map pin query
+│       └── filters.ts          # Cached filter option generation
+├── tests/
+│   ├── unit/
+│   │   └── display-helpers.test.ts  # Jest unit tests for display helper functions
+│   └── e2e/
+│       ├── public.spec.ts           # Playwright: home, search, map, 404
+│       ├── admin.spec.ts            # Playwright: auth guard, login, field editor UI
+│       └── config-propagation.spec.ts # Playwright: admin change → public page reflects it
+├── jest.config.ts              # Jest config (Next.js SWC transform, node environment)
+├── playwright.config.ts        # Playwright config (baseURL, webServer auto-start)
+└── public/                     # Static assets
 ```
 
 ## Routes
 
 | Route | Type | Description |
 |---|---|---|
-| `/` | Server | Homepage with search bar and archive stats |
+| `/` | Server | Homepage with search bar |
 | `/search` | Server | Full-text + faceted search across records and persons |
 | `/record/[id]` | Server | Detailed view of a single archive document |
 | `/person/[id]` | Server | Profile page for a named historical person |
 | `/map` | Server (shell) | Interactive Leaflet map (client component inside) |
+| `/admin/login` | Client | Email/password login for admin access |
+| `/admin/fields` | Server | Field configuration editor (requires auth) |
+| `/auth/signout` | Route Handler | POST → sign out + redirect to login |
 
-All routes are server components by default. Client components (`'use client'`) are used only where browser APIs or interactivity is required: the search bar, filters, pagination, map, and timeline chart.
+All public routes are server components by default. Client components (`'use client'`) are used only where browser APIs or interactivity is required: the search bar, filters, pagination, map, timeline chart, and admin edit dialog.
 
 ## Database
 
-The database lives in Supabase (PostgreSQL). All tables enforce **Row Level Security (RLS)**. The application connects using the public **anon key**; no service role key is used in the client code.
+The database lives in Supabase (PostgreSQL). All tables enforce **Row Level Security (RLS)**. The public-facing application connects using the anon key; no service role key is used in the client code.
 
 ### Entity–Relationship Overview
 
@@ -121,9 +244,14 @@ containers
 
 geocode_cache
    └─ latitude/longitude for location strings extracted from documents
+
+document_field_config    ┐
+person_field_config      │ Field config — 4 tables managed by the admin UI.
+container_field_config   │ Read at runtime by lib/config/db-config.ts.
+relationship_field_config┘
 ```
 
-> **Soft foreign keys**: All cross-table references are stored as `text` or `integer[]` columns with no PostgreSQL `FOREIGN KEY` constraint. The application resolves them in code using `Number()` or array lookups.
+> **Soft foreign keys**: All cross-table references are stored as `text` or `integer[]` columns with no PostgreSQL `FOREIGN KEY` constraint. The application resolves them in code.
 
 ---
 
@@ -131,53 +259,12 @@ geocode_cache
 
 The core archive table. Each row is one historical record (pamphlet, newspaper article, court transcript, etc.).
 
+See `document_field_config` in the admin UI for the full column list and roles. Key columns:
+
 | Column | Type | Description |
 |---|---|---|
 | `id` | `integer` | Primary key |
 | `visibility` | `text` | `public` or `viewable` — controls RLS access |
-| `title` | `text` | Full title of the document |
-| `title_raw` | `text` | Unprocessed/original title string |
-| `date` | `date` | PostgreSQL date (YYYY-MM-DD) |
-| `author_or_creator` | `text[]` | Person IDs (as text strings) who authored the document |
-| `container` | `text` | ID of the parent container (publication/series) |
-| `provisional_category` | `text[]` | Top-level thematic categories |
-| `crossdressing_activities` | `text[]` | Specific activities described |
-| `topics` | `text[]` | Thematic topics covered |
-| `motive` | `text[]` | Attributed motives for cross-dressing |
-| `attire` | `text[]` | Types of dress described |
-| `item_format` | `text[]` | Format(s) of the original item (e.g. pamphlet, newspaper) |
-| `social_rank` | `text[]` | Social rank of subjects |
-| `crossdressing_occupation` | `text[]` | Occupations associated with cross-dressing |
-| `locations_mentioned` | `text[]` | Place names mentioned in the document |
-| `short_summary` | `text` | Editorial summary |
-| `cite_as` | `text` | Preferred citation string |
-| `url` | `text` | URL to the source or digitised copy |
-| `source` | `text` | Bibliographic source reference |
-| `name_title` | `text` | Name/title of the primary subject |
-| `age_in_record` | `text` | Age of subject as recorded |
-| `alternate_name_s_title_s` | `text[]` | Alternative names or titles |
-| `colonial_agency` | `text[]` | Colonial agency tags |
-| `column_s` | `text[]` | Newspaper column references |
-| `container_form` | `text` | Physical form of the container |
-| `described_age_in_record` | `text[]` | Described ages in the record |
-| `discovery_of_crossdressing` | `text[]` | How/when cross-dressing was discovered |
-| `gender_manifestation` | `text[]` | Gender expression described |
-| `keyword` | `text[]` | Additional keywords |
-| `motive_stated_by_main_protagonist` | `text` | Motive as stated by the protagonist |
-| `page_numbers` | `text[]` | Page references |
-| `racialization` | `text` | Racialisation as recorded in the source |
-| `related_image` | `text[]` | References to related images |
-| `report_scope` | `text` | Scope of the report |
-| `report_size` | `text` | Size/length of the report |
-| `secondary_protagonists` | `text[]` | Other named individuals |
-| `sex_perceived_by_others` | `text[]` | Sex as perceived by others in the record |
-| `sex_perceived_by_recorder` | `text[]` | Sex as perceived by the recorder |
-| `sexuality` | `text[]` | Sexuality references |
-| `stated_sex` | `text` | Sex as explicitly stated |
-| `tone_of_the_report` | `text[]` | Editorial tone of the source |
-| `venue` | `text[]` | Venues mentioned |
-| `added` | `timestamptz` | Record creation timestamp |
-| `modified` | `timestamptz` | Record last-modified timestamp |
 | `fts` | `tsvector` | Full-text search vector (generated) |
 
 **RLS policy**: `visibility = 'public'` — only public rows are readable by the anon key.
@@ -188,64 +275,32 @@ The core archive table. Each row is one historical record (pamphlet, newspaper a
 
 Named historical individuals referenced across the archive.
 
+See `person_field_config` in the admin UI for the full column list and roles. Key columns:
+
 | Column | Type | Description |
 |---|---|---|
 | `id` | `integer` | Primary key |
 | `visibility` | `text` | `public` or `viewable` — controls RLS access |
-| `title` | `text` | Display name (typically the canonical full name) |
-| `title_raw` | `text` | Unprocessed name string |
-| `given_names` | `text` | Given/forename(s) |
-| `alternative_name` | `text` | Single alternative name |
-| `alternate_name_s_title_s` | `text[]` | Additional alternative names or titles |
-| `crossdressing_name_s` | `text[]` | Name(s) used while cross-dressing |
-| `pseudonym` | `text[]` | Pseudonym(s) |
-| `honorific` | `text[]` | Honorifics (e.g. Mr, Mrs, Dr) |
-| `name_title` | `text[]` | Name-related titles |
-| `person_type` | `text[]` | Categories (e.g. cross-dresser, author, soldier) |
-| `gender` | `text` | Gender as recorded |
-| `presumptive_sex` | `text` | Presumptive sex assigned in sources |
-| `social_rank` | `text` | Social rank |
-| `short_summary` | `text` | Editorial summary |
-| `notes` | `text` | Editorial notes |
-| `primary_preferred_image` | `text` | URL or reference to a preferred image |
-| `cite_as` | `text` | Preferred citation string |
-| `url` | `text` | URL to an external source |
-| `added` | `timestamptz` | Record creation timestamp |
-| `modified` | `timestamptz` | Record last-modified timestamp |
 | `fts` | `tsvector` | Full-text search vector (generated) |
 
-**RLS policy**: `visibility = ANY (ARRAY['public', 'viewable'])` — both values are readable by the anon key.
-
-**Display name logic**: `personDisplayName()` in `lib/queries/types.ts` combines `given_names` and the first value of `name_title` (surname), falling back to `title` then `Person #<id>`.
+**RLS policy**: `visibility IN ('public', 'viewable')` — both values are readable by the anon key.
 
 ---
 
 ### Table: `relationships`
 
-A junction table linking persons to documents, capturing the nature of the relationship.
+A junction table linking persons to documents.
+
+See `relationship_field_config` in the admin UI for column names. Key columns:
 
 | Column | Type | Description |
 |---|---|---|
 | `id` | `integer` | Primary key |
-| `visibility` | `text` | `public` or `viewable` — controls RLS access |
-| `relationship_type` | `text` | Nature of the link (see below) |
-| `source_record_pointer` | `text` | ID of the source entity (person or document) |
-| `target_record_pointer` | `text` | ID of the target entity (person or document) |
-| `title` | `text` | Relationship label |
-| `title_raw` | `text` | Unprocessed label |
-| `cite_as` | `text` | Preferred citation string |
-| `url` | `text` | URL to an external source |
-| `added` | `timestamptz` | Record creation timestamp |
-| `modified` | `timestamptz` | Record last-modified timestamp |
-| `fts` | `tsvector` | Full-text search vector (generated) |
+| `relationship_type` | `text` | Nature of the link (e.g. `'is Mentioned In'`) |
+| `source_record_pointer` | `text` | ID of the source entity |
+| `target_record_pointer` | `text` | ID of the target entity |
 
-**Known relationship types** (as found in data):
-- `is Mentioned In` — person is named or described in the document
-- `Mentions` — inverse of the above (document-centric direction)
-- `IsMarriedTo` — marriage relationship between two persons
-- `isWifeOf` — spousal relationship
-
-**RLS policy**: `visibility = ANY (ARRAY['public', 'viewable'])` — both values are readable by the anon key.
+**RLS policy**: `visibility IN ('public', 'viewable')`.
 
 ---
 
@@ -253,55 +308,37 @@ A junction table linking persons to documents, capturing the nature of the relat
 
 Publications, series, or collections that group documents.
 
-| Column | Type | Description |
-|---|---|---|
-| `id` | `integer` | Primary key |
-| `visibility` | `text` | Visibility value (RLS uses `true` — all rows readable) |
-| `title` | `text` | Full title of the publication or series |
-| `title_raw` | `text` | Unprocessed title string |
-| `short_name` | `text` | Abbreviated name |
-| `name_title` | `text` | Name/title variant |
-| `short_summary` | `text` | Editorial summary or notes |
-| `cite_as` | `text` | Preferred citation string |
-| `url` | `text` | URL to the publication or series |
-| `added` | `timestamptz` | Record creation timestamp |
-| `modified` | `timestamptz` | Record last-modified timestamp |
-| `fts` | `tsvector` | Full-text search vector (generated) |
+See `container_field_config` in the admin UI for column names.
 
-**RLS policy**: `true` (unrestricted — all rows readable by the anon key).
-
-Referenced by `documents.container`. Resolved in `getDocumentEnrichment()` in `lib/queries/documents.ts`.
+**RLS policy**: `true` (all rows readable by the anon key).
 
 ---
 
 ### Table: `geocode_cache`
 
-Stores resolved latitude/longitude coordinates for location strings found in documents.
+Resolved latitude/longitude for location strings found in documents.
 
 | Column | Type | Description |
 |---|---|---|
-| `location` | `text` | Primary key — the location string as it appears in `documents.locations_mentioned` |
+| `location` | `text` | Primary key — location string as it appears in documents |
 | `lat` | `double precision` | Latitude |
 | `lng` | `double precision` | Longitude |
-| `geocoded_at` | `timestamptz` | When this entry was geocoded (defaults to `now()`) |
 
-**RLS policy**: `true` (unrestricted — all rows readable by the anon key).
-
-Used exclusively by `getMapPins()` in `lib/queries/map.ts`, which joins distinct location strings from documents against this table to build the map data.
+**RLS policy**: `true`. Used exclusively by `getMapPins()` in `lib/queries/map.ts`.
 
 ---
 
 ### Typical Data Fetching Flows
 
 **Search page (records tab)** — `lib/queries/documents.ts`, `lib/queries/filters.ts`
-1. `searchDocuments()` — full-text + filter query on `documents` with `fts @@ ...`, `date` range, and multiselect `overlaps`/`in` filters. Returns paginated rows.
-2. `searchDocumentDates()` — same query but `SELECT date` only, used to populate the timeline chart.
+1. `searchDocuments()` — full-text + filter query on `documents`. Returns paginated rows.
+2. `searchDocumentDates()` — same query but `SELECT date` only, for the timeline chart.
 3. `getArchiveDates()` — all dates from `documents` (unfiltered), for the chart background.
-4. `getDocumentFilterOptions()` — cached (1 h) distinct values for every multiselect filter field, fetched from `documents`.
+4. `getDocumentFilterOptions()` — cached (1 h) distinct values for every multiselect filter field.
 
 **Record detail page** — `lib/queries/documents.ts`
 1. `getDocument(id)` — fetches a single document row by ID.
-2. `getDocumentEnrichment(id)` — parallel queries for: the parent container, mentioned persons (via `relationships`), and any persons whose `author_or_creator` array contains this document's ID.
+2. `getDocumentEnrichment(id)` — parallel queries for: the parent container, mentioned persons (via `relationships`), and author persons.
 
 **Person detail page** — `lib/queries/persons.ts`
 1. `getPerson(id)` — fetches a single person row by ID.
@@ -314,18 +351,41 @@ Used exclusively by `getMapPins()` in `lib/queries/map.ts`, which joins distinct
 
 ## Configuration System
 
-The codebase uses a **field config** pattern as a single source of truth for all column definitions. Adding, removing, or renaming a database column only requires changing the relevant config file — no changes needed anywhere else.
+All field configuration (column names, labels, filter types, display flags, roles) is stored in four Supabase tables — one per entity:
 
-All config files live in `lib/config/`:
-
-| File | Table | Reference |
+| Table | Entity | Admin tab |
 |---|---|---|
-| [`document-field-config.ts`](lib/config/document-field-config.ts) | `documents` | [`document-field-config.md`](lib/config/document-field-config.md) |
-| [`person-field-config.ts`](lib/config/person-field-config.ts) | `persons` | [`person-field-config.md`](lib/config/person-field-config.md) |
-| [`container-field-config.ts`](lib/config/container-field-config.ts) | `containers` | [`container-field-config.md`](lib/config/container-field-config.md) |
-| [`relationship-field-config.ts`](lib/config/relationship-field-config.ts) | `relationships` | [`relationship-field-config.md`](lib/config/relationship-field-config.md) |
+| `document_field_config` | `documents` | Documents |
+| `person_field_config` | `persons` | Persons |
+| `container_field_config` | `containers` | Containers |
+| `relationship_field_config` | `relationships` | Relationships |
 
-The document and person configs drive: search result table columns, filter sidebar groups, active filter pills, record/person detail display, query SELECT clauses, and filter option generation.
+**To change any field** — log in at `/admin/login` and edit through the admin UI. No code changes or redeployment needed.
+
+### Runtime config layer — `lib/config/db-config.ts`
+
+Four async functions read from the four tables and expose typed constants:
+
+```ts
+const { TABLE_FIELDS, SORT_DATE_KEY, FILTER_FIELDS, ... } = await getDocumentConfig()
+const { PERSON_TABLE_FIELDS, PERSON_SORT_KEY, ... }        = await getPersonConfig()
+const { CONTAINER_SELECT_COLUMNS, CONTAINER_NAME_TITLE_KEY, ... } = await getContainerConfig()
+const { RELATIONSHIP_SOURCE_KEY, RELATIONSHIP_TARGET_KEY, ... }   = await getRelationshipConfig()
+```
+
+All four functions use `'use cache'` with `cacheLife('max')` (30-day revalidation) and `cacheTag('field-config')`. When an admin saves any change, `updateTag('field-config')` immediately expires all four caches.
+
+`FTS_COLUMN = 'fts'` and `VISIBILITY_COLUMN = 'visibility'` are TypeScript constants — not stored in the database, since they are internal implementation details that should never change.
+
+### Admin access
+
+Admin users are created manually in the Supabase dashboard (Authentication → Users). There is no self-registration.
+
+- **Login**: `/admin/login`
+- **Field editor**: `/admin/fields`
+- **Sign out**: button in the admin header
+
+Admin routes check `supabase.auth.getUser()` server-side and redirect to `/admin/login` if no authenticated user is found.
 
 ---
 
@@ -342,6 +402,19 @@ The `visibility` column appears on all tables. Policies differ by table:
 | `geocode_cache` | `true` (all rows) |
 
 The application never uses the Supabase service role key. All queries run under the anon key and respect RLS automatically.
+
+---
+
+## Caching
+
+With `cacheComponents: true` in `next.config.ts`, data fetching is **dynamic by default** — pages are not prerendered unless they explicitly use `'use cache'`. The two intentionally cached functions are:
+
+| Function | Cache life | Tag | Invalidated by |
+|---|---|---|---|
+| `getDocumentConfig()` / `getPersonConfig()` / `getContainerConfig()` / `getRelationshipConfig()` | `max` (30d revalidate) | `field-config` | `updateTag('field-config')` on admin save |
+| `getDocumentFilterOptions()` / `getPersonFilterOptions()` | `hours` (1h revalidate) | — | Time-based only |
+
+All other data fetching (search queries, record/person lookups, map pins) is fully dynamic — fetched fresh on every request.
 
 ---
 
@@ -364,7 +437,7 @@ Key tokens:
 | `--color-on-accent` | Text/icons on crimson backgrounds |
 | `--color-overlay` | Modal/drawer backdrop |
 
-To restyle the site, update the token values in `app/globals.css` — no component changes are needed.
+To restyle the site, update the token values in `app/globals.css` — no component changes needed.
 
 ---
 
@@ -372,8 +445,9 @@ To restyle the site, update the token values in `app/globals.css` — no compone
 
 | Package | Purpose |
 |---|---|
-| `next` | Framework (App Router, server components, caching) |
-| `@supabase/supabase-js` | Database client |
+| `next` | Framework (App Router, server components, `'use cache'`) |
+| `@supabase/supabase-js` | Data client (server-only, anon key) |
+| `@supabase/ssr` | Auth client (browser + server, session management) |
 | `leaflet` | Interactive map |
 | `leaflet.markercluster` | Marker clustering for the map |
 | `leaflet.heat` | Heatmap layer for the map |

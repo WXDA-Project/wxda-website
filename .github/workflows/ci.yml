@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Cancel in-progress runs for the same ref so a new push to a PR doesn't
+# queue behind the previous one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Unit tests (Jest) ──────────────────────────────────────────────────────
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+  # ── Lint (ESLint) ──────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  # ── Type check (TypeScript) ────────────────────────────────────────────────
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tsc
+        run: npx tsc --noEmit
+
+  # ── E2E tests (Playwright + local Supabase) ────────────────────────────────
+  #
+  # Only runs on pull requests — heavy Docker setup is not worth the cost on
+  # every push to master. The unit, lint, and typecheck jobs still run on both.
+  #
+  # Playwright Chromium binary is cached on package-lock.json. On a cache hit
+  # only the OS system deps (fast apt install) need to run.
+  e2e:
+    name: E2E tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Export Supabase env vars
+        run: |
+          # -o env prints KEY=value pairs — more reliable than grepping human-readable output.
+          SUPABASE_ENV=$(supabase status -o env 2>/dev/null)
+          # Use ANON_KEY (a JWT) not PUBLISHABLE_KEY (sb_publishable_... format).
+          # Local PostgREST only validates JWT bearer tokens; the cloud publishable
+          # key format is rejected with "Expected 3 parts in JWT; got 1".
+          ANON_KEY=$(echo "$SUPABASE_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
+          if [ -z "$ANON_KEY" ]; then
+            echo "ERROR: could not extract ANON_KEY. supabase status -o env output:" >&2
+            echo "$SUPABASE_ENV" >&2
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
+          # Also write .env.test so playwright.config.ts picks it up via dotenv.config().
+          # next dev inlines NEXT_PUBLIC_ vars at compile time and doesn't reliably
+          # pick them up from webServer.env alone.
+          printf 'NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\nNEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$ANON_KEY" > .env.test
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright with deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
