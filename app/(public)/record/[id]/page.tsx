@@ -10,23 +10,7 @@ import {
   type PersonSummary,
   type ContainerSummary,
 } from '@/lib/queries'
-import {
-  DETAIL_FIELDS,
-  ENRICHED_KEYS,
-  AUTHOR_FIELD_KEY,
-  CONTAINER_FIELD_KEY,
-  CITE_AS_KEY,
-  SOURCE_URL_KEY,
-  SORT_DATE_KEY,
-  DOC_TITLE_KEY,
-  DOC_SUMMARY_KEY,
-} from '@/lib/config/document-field-config'
-import { PERSON_TYPE_KEY, PERSON_SUMMARY_KEY } from '@/lib/config/person-field-config'
-import {
-  CONTAINER_SHORT_NAME_KEY,
-  CONTAINER_SUMMARY_KEY,
-  CONTAINER_SOURCE_URL_KEY,
-} from '@/lib/config/container-field-config'
+import { getDocumentConfig, getPersonConfig, getContainerConfig } from '@/lib/config/db-config'
 import DownloadPdfButton, { type PdfDoc, type PdfSection } from '@/components/DownloadPdfButton'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -59,9 +43,23 @@ function Divider() {
   return <hr className="border-border my-6" />
 }
 
-function PersonChip({ person }: { person: PersonSummary }) {
-  const name = personDisplayName(person)
-  const personType = person[PERSON_TYPE_KEY] as string[] | null
+type PersonKeys = { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string }
+type ContainerKeys = {
+  CONTAINER_NAME_TITLE_KEY: string; CONTAINER_SHORT_NAME_KEY: string; CONTAINER_TITLE_KEY: string
+  CONTAINER_SUMMARY_KEY: string; CONTAINER_SOURCE_URL_KEY: string
+}
+
+function PersonChip({
+  person,
+  personTypeKey,
+  personKeys,
+}: {
+  person: PersonSummary
+  personTypeKey: string
+  personKeys: PersonKeys
+}) {
+  const name = personDisplayName(person, personKeys)
+  const personType = person[personTypeKey] as string[] | null
   return (
     <Link
       href={`/person/${person.id}`}
@@ -85,10 +83,13 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const record = await getDocument(Number(id))
+  const [record, { DOC_NAME_TITLE_KEY, DOC_TITLE_KEY }] = await Promise.all([
+    getDocument(Number(id)),
+    getDocumentConfig(),
+  ])
   if (!record) return { title: 'Record Not Found' }
   return {
-    title: documentDisplayTitle(record as Record<string, unknown>, id),
+    title: documentDisplayTitle(record as Record<string, unknown>, { DOC_NAME_TITLE_KEY, DOC_TITLE_KEY }, id),
   }
 }
 
@@ -102,19 +103,46 @@ export default async function RecordDetailPage({
   const { id } = await params
   const numId = Number(id)
 
-  const record = await getDocument(numId)
+  const [
+    record,
+    {
+      DETAIL_FIELDS, ENRICHED_KEYS,
+      AUTHOR_FIELD_KEY, CONTAINER_FIELD_KEY, CITE_AS_KEY, SOURCE_URL_KEY,
+      SORT_DATE_KEY, DOC_TITLE_KEY, DOC_NAME_TITLE_KEY, DOC_SUMMARY_KEY,
+    },
+    {
+      PERSON_TYPE_KEY, PERSON_SUMMARY_KEY,
+      PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY,
+    },
+    {
+      CONTAINER_NAME_TITLE_KEY, CONTAINER_SHORT_NAME_KEY, CONTAINER_TITLE_KEY,
+      CONTAINER_SUMMARY_KEY, CONTAINER_SOURCE_URL_KEY,
+    },
+  ] = await Promise.all([
+    getDocument(numId),
+    getDocumentConfig(),
+    getPersonConfig(),
+    getContainerConfig(),
+  ])
+
   if (!record) notFound()
 
   const rec = record as Record<string, string | string[] | null | undefined>
 
-  // Fetch enrichment (authors → persons, container → containers, relationships → persons)
   const enrichment = await getDocumentEnrichment(
     (rec[AUTHOR_FIELD_KEY] as string[] | null) ?? [],
     (rec[CONTAINER_FIELD_KEY] as string | null) ?? null,
     numId,
   )
 
-  const title = documentDisplayTitle(rec, id)
+  const personKeys: PersonKeys = { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }
+  const containerKeys: ContainerKeys = {
+    CONTAINER_NAME_TITLE_KEY, CONTAINER_SHORT_NAME_KEY, CONTAINER_TITLE_KEY,
+    CONTAINER_SUMMARY_KEY, CONTAINER_SOURCE_URL_KEY,
+  }
+  const docKeys = { DOC_NAME_TITLE_KEY, DOC_TITLE_KEY }
+
+  const title = documentDisplayTitle(rec, docKeys, id)
 
   // ── Build PDF document ────────────────────────────────────────────────────
   const pdfSections: PdfSection[] = []
@@ -127,7 +155,7 @@ export default async function RecordDetailPage({
 
   if (enrichment.container) {
     const c = enrichment.container
-    const cName = containerDisplayName(c, c.id)
+    const cName = containerDisplayName(c, containerKeys, c.id)
     const cRows: PdfSection['rows'] = [{ label: 'Title', value: cName }]
     const cShortName = c[CONTAINER_SHORT_NAME_KEY] as string | null
     if (cShortName && cShortName !== cName) cRows.push({ label: 'Short name', value: cShortName })
@@ -139,7 +167,7 @@ export default async function RecordDetailPage({
   if (enrichment.authors.length > 0)
     pdfSections.push({
       heading: 'Author / Creator',
-      rows: [{ label: '', value: enrichment.authors.map((p) => personDisplayName(p)).join('; ') }],
+      rows: [{ label: '', value: enrichment.authors.map((p) => personDisplayName(p, personKeys)).join('; ') }],
     })
 
   const detailRows = DETAIL_FIELDS.filter((f) => !ENRICHED_KEYS.has(f.key))
@@ -156,7 +184,7 @@ export default async function RecordDetailPage({
     pdfSections.push({
       heading: 'People Mentioned',
       rows: enrichment.mentionedPersons.map(({ person, relationship_type }) => ({
-        label: personDisplayName(person),
+        label: personDisplayName(person, personKeys),
         value: [relationship_type, person[PERSON_SUMMARY_KEY]].filter(Boolean).join(' — '),
       })),
     })
@@ -238,7 +266,7 @@ export default async function RecordDetailPage({
           <>
             <section aria-label="Publication details">
               <SectionHeading>Publication</SectionHeading>
-              <ContainerCard container={enrichment.container} />
+              <ContainerCard container={enrichment.container} containerKeys={containerKeys} />
             </section>
             <Divider />
           </>
@@ -251,7 +279,7 @@ export default async function RecordDetailPage({
               <SectionHeading>Author / Creator</SectionHeading>
               <div className="flex flex-wrap gap-2">
                 {enrichment.authors.map((p) => (
-                  <PersonChip key={p.id} person={p} />
+                  <PersonChip key={p.id} person={p} personTypeKey={PERSON_TYPE_KEY} personKeys={personKeys} />
                 ))}
               </div>
             </section>
@@ -294,7 +322,7 @@ export default async function RecordDetailPage({
               <ul className="space-y-2 list-none p-0 m-0">
                 {enrichment.mentionedPersons.map(({ person, relationship_type }, i) => (
                   <li key={`${person.id}-${i}`} className="flex items-start gap-3 flex-wrap">
-                    <PersonChip person={person} />
+                    <PersonChip person={person} personTypeKey={PERSON_TYPE_KEY} personKeys={personKeys} />
                     <span className="text-xs self-center text-muted">
                       {relationship_type}
                     </span>
@@ -346,9 +374,15 @@ export default async function RecordDetailPage({
 
 // ── Container card ─────────────────────────────────────────────────────────
 
-function ContainerCard({ container }: { container: ContainerSummary }) {
-  const name = containerDisplayName(container, container.id)
-  const shortName = container[CONTAINER_SHORT_NAME_KEY] as string | null
+function ContainerCard({
+  container,
+  containerKeys,
+}: {
+  container: ContainerSummary
+  containerKeys: ContainerKeys
+}) {
+  const name = containerDisplayName(container, containerKeys, container.id)
+  const shortName = container[containerKeys.CONTAINER_SHORT_NAME_KEY] as string | null
   return (
     <div className="rounded p-3 text-sm bg-tag-bg border border-border">
       <p className="font-semibold text-ink">
@@ -359,15 +393,15 @@ function ContainerCard({ container }: { container: ContainerSummary }) {
           </span>
         )}
       </p>
-      {(container[CONTAINER_SUMMARY_KEY] as string | null) && (
+      {(container[containerKeys.CONTAINER_SUMMARY_KEY] as string | null) && (
         <p className="mt-1 text-muted">
-          {container[CONTAINER_SUMMARY_KEY] as string}
+          {container[containerKeys.CONTAINER_SUMMARY_KEY] as string}
         </p>
       )}
-      {(container[CONTAINER_SOURCE_URL_KEY] as string | null) && (
+      {(container[containerKeys.CONTAINER_SOURCE_URL_KEY] as string | null) && (
         <p className="mt-1">
           <a
-            href={container[CONTAINER_SOURCE_URL_KEY] as string}
+            href={container[containerKeys.CONTAINER_SOURCE_URL_KEY] as string}
             target="_blank"
             rel="noopener noreferrer"
           >

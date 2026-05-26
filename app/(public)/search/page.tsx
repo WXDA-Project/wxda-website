@@ -13,12 +13,7 @@ import {
   type PersonRow,
   type PersonSummary,
 } from '@/lib/queries'
-import { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, FILTER_FIELDS } from '@/lib/config/document-field-config'
-import {
-  PERSON_TABLE_FIELDS,
-  PERSON_FILTER_FIELDS,
-  PERSON_MULTISELECT_FILTER_FIELDS,
-} from '@/lib/config/person-field-config'
+import { getDocumentConfig, getPersonConfig, type FieldConfig } from '@/lib/config/db-config'
 import SearchFilters from '@/components/SearchFilters'
 import Pagination from '@/components/Pagination'
 import TabNav from '@/components/TabNav'
@@ -53,7 +48,13 @@ function truncate(str: string, max: number): string {
 
 // ── Record results table ───────────────────────────────────────────────────
 
-function RecordResultsTable({ records }: { records: Record<string, unknown>[] }) {
+function RecordResultsTable({
+  records,
+  tableFields,
+}: {
+  records: Record<string, unknown>[]
+  tableFields: FieldConfig[]
+}) {
   if (records.length === 0) {
     return (
       <p className="text-sm py-8 text-center text-muted">
@@ -66,19 +67,14 @@ function RecordResultsTable({ records }: { records: Record<string, unknown>[] })
       <table className="w-full text-sm border-collapse border-t-2 border-ink">
         <thead>
           <tr className="border-b border-border">
-            {TABLE_FIELDS.map((f) => {
+            {tableFields.map((f) => {
               const hideCls = f.hideOnTablet ? ' hidden lg:table-cell' : f.hideOnMobile ? ' hidden sm:table-cell' : ''
               return (
-                <th
-                  key={f.key}
-                  scope="col"
-                  className={`text-left py-2 px-3 text-xs font-semibold tracking-wide uppercase text-muted whitespace-nowrap${hideCls}`}
-                >
+                <th key={f.key} scope="col" className={`text-left py-2 px-3 text-xs font-semibold tracking-wide uppercase text-muted whitespace-nowrap${hideCls}`}>
                   {f.label}
                 </th>
               )
             })}
-            {/* width:1% + whitespace-nowrap = size to minimum content, never squeezed */}
             <th scope="col" className="py-2 px-3 w-[1%] whitespace-nowrap">
               <span className="sr-only">Actions</span>
             </th>
@@ -87,7 +83,7 @@ function RecordResultsTable({ records }: { records: Record<string, unknown>[] })
         <tbody>
           {records.map((record) => (
             <tr key={record.id as number} className="border-b border-border hover:bg-paper transition-colors">
-              {TABLE_FIELDS.map((f) => {
+              {tableFields.map((f) => {
                 const raw = record[f.key]
                 let display: string
                 if (f.format === 'date') {
@@ -98,10 +94,7 @@ function RecordResultsTable({ records }: { records: Record<string, unknown>[] })
                 }
                 const hideCls = f.hideOnTablet ? ' hidden lg:table-cell' : f.hideOnMobile ? ' hidden sm:table-cell' : ''
                 return (
-                  <td
-                    key={f.key}
-                    className={`py-3 px-3 align-top text-ink${hideCls}${f.format === 'date' ? ' whitespace-nowrap' : ''}`}
-                  >
+                  <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}${f.format === 'date' ? ' whitespace-nowrap' : ''}`}>
                     {display}
                   </td>
                 )
@@ -121,7 +114,15 @@ function RecordResultsTable({ records }: { records: Record<string, unknown>[] })
 
 // ── Person results table ───────────────────────────────────────────────────
 
-function PersonResultsTable({ records }: { records: PersonRow[] }) {
+function PersonResultsTable({
+  records,
+  personTableFields,
+  personConfig,
+}: {
+  records: PersonRow[]
+  personTableFields: FieldConfig[]
+  personConfig: { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string }
+}) {
   if (records.length === 0) {
     return (
       <p className="text-sm py-8 text-center text-muted">
@@ -137,12 +138,8 @@ function PersonResultsTable({ records }: { records: PersonRow[] }) {
             <th scope="col" className="text-left py-2 px-3 text-xs font-semibold tracking-wide uppercase text-muted whitespace-nowrap">
               Name
             </th>
-            {PERSON_TABLE_FIELDS.map((f) => (
-              <th
-                key={f.key}
-                scope="col"
-                className="text-left py-2 px-3 text-xs font-semibold tracking-wide uppercase hidden sm:table-cell text-muted whitespace-nowrap"
-              >
+            {personTableFields.map((f) => (
+              <th key={f.key} scope="col" className="text-left py-2 px-3 text-xs font-semibold tracking-wide uppercase hidden sm:table-cell text-muted whitespace-nowrap">
                 {f.label}
               </th>
             ))}
@@ -153,7 +150,7 @@ function PersonResultsTable({ records }: { records: PersonRow[] }) {
         </thead>
         <tbody>
           {records.map((person) => {
-            const name = personDisplayName(person as unknown as PersonSummary)
+            const name = personDisplayName(person as unknown as PersonSummary, personConfig)
             return (
               <tr key={person.id} className="border-b border-border hover:bg-paper transition-colors">
                 <td className="py-3 px-3 align-top">
@@ -161,7 +158,7 @@ function PersonResultsTable({ records }: { records: PersonRow[] }) {
                     {name}
                   </Link>
                 </td>
-                {PERSON_TABLE_FIELDS.map((f) => {
+                {personTableFields.map((f) => {
                   const raw = person[f.key as keyof PersonRow]
                   const display = truncate(formatValue(raw), f.maxTableLength ?? 60)
                   return (
@@ -196,14 +193,16 @@ export default async function SearchPage({
   const q = (sp.q as string | undefined) ?? undefined
   const page = parseInt((sp.page as string | undefined) ?? '1', 10)
 
-  // Tab switching links: preserve the current keyword query but drop all filters
   const tabBase = new URLSearchParams()
   if (q) tabBase.set('q', q)
   const recordsTabHref = `/search${tabBase.size ? `?${tabBase}` : ''}`
   const personsTabHref = `/search?tab=persons${q ? `&q=${encodeURIComponent(q)}` : ''}`
 
-  // ── Records search ────────────────────────────────────────────────────────
+  // ── Records search ─────────────────────────────────────────────────────────
   if (tab === 'records') {
+    const [docConfig] = await Promise.all([getDocumentConfig()])
+    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD } = docConfig
+
     const date_from = (sp.date_from as string | undefined) ?? undefined
     const date_to = (sp.date_to as string | undefined) ?? undefined
     const filters: Record<string, string[]> = {}
@@ -231,7 +230,11 @@ export default async function SearchPage({
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           <div className="w-full lg:w-64 shrink-0">
             <Suspense>
-              <SearchFilters filterFields={FILTER_FIELDS} filterOptions={filterOptions} />
+              <SearchFilters
+                filterFields={FILTER_FIELDS}
+                dateFilterField={DATE_FILTER_FIELD}
+                filterOptions={filterOptions}
+              />
             </Suspense>
           </div>
           <div className="flex-1 min-w-0">
@@ -241,8 +244,13 @@ export default async function SearchPage({
                 <>Showing <strong className="text-ink">{firstResult}–{lastResult}</strong> of <strong className="text-ink">{result.total.toLocaleString()}</strong> record{result.total !== 1 ? 's' : ''}</>
               )}
             </p>
-            <TimelineChart archiveDates={archiveDates} filteredDates={filteredDates} />
-            <RecordResultsTable records={result.records} />
+            <TimelineChart
+              archiveDates={archiveDates}
+              filteredDates={filteredDates}
+              minDate={DATE_FILTER_FIELD.minDate!}
+              maxDate={DATE_FILTER_FIELD.maxDate!}
+            />
+            <RecordResultsTable records={result.records} tableFields={TABLE_FIELDS} />
             <Suspense>
               <Pagination currentPage={result.page} totalPages={result.totalPages} />
             </Suspense>
@@ -252,7 +260,10 @@ export default async function SearchPage({
     )
   }
 
-  // ── Persons search ────────────────────────────────────────────────────────
+  // ── Persons search ─────────────────────────────────────────────────────────
+  const personConfig = await getPersonConfig()
+  const { PERSON_TABLE_FIELDS, PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS } = personConfig
+
   const filters: Record<string, string[]> = {}
   for (const field of PERSON_MULTISELECT_FILTER_FIELDS) {
     const vals = normalise(sp[field.paramKey!])
@@ -276,7 +287,11 @@ export default async function SearchPage({
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
         <div className="w-full lg:w-64 shrink-0">
           <Suspense>
-            <SearchFilters filterFields={PERSON_FILTER_FIELDS} tab="persons" filterOptions={filterOptions} />
+            <SearchFilters
+              filterFields={PERSON_FILTER_FIELDS}
+              tab="persons"
+              filterOptions={filterOptions}
+            />
           </Suspense>
         </div>
         <div className="flex-1 min-w-0">
@@ -286,7 +301,11 @@ export default async function SearchPage({
               <>Showing <strong className="text-ink">{firstResult}–{lastResult}</strong> of <strong className="text-ink">{result.total.toLocaleString()}</strong> person{result.total !== 1 ? 's' : ''}</>
             )}
           </p>
-          <PersonResultsTable records={result.records} />
+          <PersonResultsTable
+            records={result.records}
+            personTableFields={PERSON_TABLE_FIELDS}
+            personConfig={personConfig}
+          />
           <Suspense>
             <Pagination currentPage={result.page} totalPages={result.totalPages} />
           </Suspense>
