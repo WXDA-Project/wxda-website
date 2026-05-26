@@ -6,8 +6,10 @@ import {
   searchDocumentDates,
   getArchiveDates,
   getDocumentFilterOptions,
+  getDocumentFacetCounts,
   searchPersons,
   getPersonFilterOptions,
+  getPersonFacetCounts,
   personDisplayName,
   PAGE_SIZE,
   type PersonRow,
@@ -211,11 +213,12 @@ export default async function SearchPage({
       if (vals.length > 0) filters[field.paramKey!] = vals
     }
 
-    const [result, archiveDates, filteredDates, filterOptions] = await Promise.all([
+    const [result, archiveDates, filteredDates, filterOptions, filterCounts] = await Promise.all([
       searchDocuments({ q, date_from, date_to, filters, page }),
       getArchiveDates(),
       searchDocumentDates({ q, date_from, date_to, filters }),
       getDocumentFilterOptions(),
+      getDocumentFacetCounts({ q, date_from, date_to, filters }),
     ])
     const firstResult = (page - 1) * PAGE_SIZE + 1
     const lastResult = Math.min(page * PAGE_SIZE, result.total)
@@ -234,6 +237,7 @@ export default async function SearchPage({
                 filterFields={FILTER_FIELDS}
                 dateFilterField={DATE_FILTER_FIELD}
                 filterOptions={filterOptions}
+                filterCounts={filterCounts}
               />
             </Suspense>
           </div>
@@ -270,9 +274,10 @@ export default async function SearchPage({
     if (vals.length > 0) filters[field.paramKey!] = vals
   }
 
-  const [result, filterOptions] = await Promise.all([
+  const [result, filterOptions, filterCounts] = await Promise.all([
     searchPersons({ q, filters, page }),
     getPersonFilterOptions(),
+    getPersonFacetCounts({ q, filters }),
   ])
   const firstResult = (page - 1) * PAGE_SIZE + 1
   const lastResult = Math.min(page * PAGE_SIZE, result.total)
@@ -291,6 +296,7 @@ export default async function SearchPage({
               filterFields={PERSON_FILTER_FIELDS}
               tab="persons"
               filterOptions={filterOptions}
+              filterCounts={filterCounts}
             />
           </Suspense>
         </div>

@@ -67,7 +67,7 @@ function SidebarContent({ pin, onClose }: { pin: MapPin; onClose: () => void }) 
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 
-export default function DocumentMap({ pins }: { pins: MapPin[] }) {
+export default function DocumentMap({ pins, focus }: { pins: MapPin[]; focus?: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const clusterRef = useRef<Layer | null>(null)
@@ -77,6 +77,9 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
 
   // Read by the async init callback so it always sees the latest value.
   const modeRef = useRef<'pins' | 'heatmap'>('pins')
+  // Always kept in sync with the latest prop so the async init reads the right value.
+  const focusRef = useRef(focus)
+  focusRef.current = focus
   useEffect(() => {
     modeRef.current = mode
   })
@@ -94,7 +97,7 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
       await import('leaflet.heat')
       if (cancelled || !containerRef.current) return
 
-      const map = L.map(containerRef.current, { center: [51.5, -0.1], zoom: 6 })
+      const map = L.map(containerRef.current, { center: [20, 0], zoom: 2 })
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution:
@@ -174,6 +177,15 @@ export default function DocumentMap({ pins }: { pins: MapPin[] }) {
       mapRef.current = map
       clusterRef.current = clusterGroup
       heatRef.current = heatLayer
+
+      // Auto-open the focused pin if one was requested via URL param.
+      if (focusRef.current && !cancelled) {
+        const pin = pins.find((p) => p.location === focusRef.current)
+        if (pin) {
+          setSelectedPin(pin)
+          map.setView([pin.lat, pin.lng], 12)
+        }
+      }
     })()
 
     return () => {

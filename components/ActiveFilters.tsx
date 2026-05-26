@@ -1,6 +1,6 @@
 'use client'
 
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import type { FieldConfig } from '@/lib/config/db-config'
 
 function formatDate(dateStr: string): string {
@@ -16,6 +16,7 @@ interface ActiveFiltersProps {
 export default function ActiveFilters({ multiselectFields }: ActiveFiltersProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const pathname = usePathname()
 
   type Pill = { label: string; removeKey: string; removeValue?: string }
   const pills: Pill[] = []
@@ -51,9 +52,7 @@ export default function ActiveFilters({ multiselectFields }: ActiveFiltersProps)
     } else {
       next.delete(pill.removeKey)
     }
-    router.push(`/search${next.toString() ? `?${next}` : ''}`)
-    // router.refresh() ensures the server component re-fetches even when the
-    // router navigates within the same pathname (same-route param change).
+    router.push(`${pathname}${next.toString() ? `?${next}` : ''}`)
     router.refresh()
   }
 

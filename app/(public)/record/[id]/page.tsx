@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import {
   getDocument,
   getDocumentEnrichment,
+  getGeocodedLocations,
   personDisplayName,
   documentDisplayTitle,
   containerDisplayName,
@@ -109,6 +110,7 @@ export default async function RecordDetailPage({
       DETAIL_FIELDS, ENRICHED_KEYS,
       AUTHOR_FIELD_KEY, CONTAINER_FIELD_KEY, CITE_AS_KEY, SOURCE_URL_KEY,
       SORT_DATE_KEY, DOC_TITLE_KEY, DOC_NAME_TITLE_KEY, DOC_SUMMARY_KEY,
+      LOCATION_FIELD_KEY,
     },
     {
       PERSON_TYPE_KEY, PERSON_SUMMARY_KEY,
@@ -118,11 +120,13 @@ export default async function RecordDetailPage({
       CONTAINER_NAME_TITLE_KEY, CONTAINER_SHORT_NAME_KEY, CONTAINER_TITLE_KEY,
       CONTAINER_SUMMARY_KEY, CONTAINER_SOURCE_URL_KEY,
     },
+    geocodedLocations,
   ] = await Promise.all([
     getDocument(numId),
     getDocumentConfig(),
     getPersonConfig(),
     getContainerConfig(),
+    getGeocodedLocations(),
   ])
 
   if (!record) notFound()
@@ -134,6 +138,8 @@ export default async function RecordDetailPage({
     (rec[CONTAINER_FIELD_KEY] as string | null) ?? null,
     numId,
   )
+
+  const geocodedSet = new Set(geocodedLocations)
 
   const personKeys: PersonKeys = { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }
   const containerKeys: ContainerKeys = {
@@ -292,6 +298,37 @@ export default async function RecordDetailPage({
           <SectionHeading>Full Record</SectionHeading>
           <dl className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-x-6 gap-y-3">
             {DETAIL_FIELDS.filter((f) => !ENRICHED_KEYS.has(f.key)).map((field) => {
+              // Location field: render each value with an optional map link
+              if (field.key === LOCATION_FIELD_KEY) {
+                const locs = (record[field.key] as string[] | null) ?? []
+                if (locs.length === 0) return null
+                return (
+                  <div key={field.key} className="contents">
+                    <dt className="text-sm font-semibold pt-0.5 text-muted">
+                      {field.label}
+                    </dt>
+                    <dd className="text-sm text-ink m-0 space-y-1">
+                      {locs.map((loc) => (
+                        <div key={loc} className="flex items-center gap-2 flex-wrap">
+                          <span>{loc}</span>
+                          {geocodedSet.has(loc) && (
+                            <Link
+                              href={`/map?focus=${encodeURIComponent(loc)}`}
+                              className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full no-underline transition-opacity bg-tag-bg text-crimson hover:opacity-75 shrink-0"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                              </svg>
+                              View on map
+                            </Link>
+                          )}
+                        </div>
+                      ))}
+                    </dd>
+                  </div>
+                )
+              }
+
               const displayValue =
                 field.format === 'date'
                   ? formatDate(record[field.key] as string | null)
