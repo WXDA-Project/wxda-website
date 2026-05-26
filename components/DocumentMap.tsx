@@ -77,9 +77,6 @@ export default function DocumentMap({ pins, focus }: { pins: MapPin[]; focus?: s
 
   // Read by the async init callback so it always sees the latest value.
   const modeRef = useRef<'pins' | 'heatmap'>('pins')
-  // Always kept in sync with the latest prop so the async init reads the right value.
-  const focusRef = useRef(focus)
-  focusRef.current = focus
   useEffect(() => {
     modeRef.current = mode
   })
@@ -179,8 +176,8 @@ export default function DocumentMap({ pins, focus }: { pins: MapPin[]; focus?: s
       heatRef.current = heatLayer
 
       // Auto-open the focused pin if one was requested via URL param.
-      if (focusRef.current && !cancelled) {
-        const pin = pins.find((p) => p.location === focusRef.current)
+      if (focus && !cancelled) {
+        const pin = pins.find((p) => p.location === focus)
         if (pin) {
           setSelectedPin(pin)
           map.setView([pin.lat, pin.lng], 12)
@@ -195,7 +192,7 @@ export default function DocumentMap({ pins, focus }: { pins: MapPin[]; focus?: s
       clusterRef.current = null
       heatRef.current = null
     }
-  }, [pins])
+  }, [pins, focus])
 
   // ── Mode toggle ───────────────────────────────────────────────────────────
 
