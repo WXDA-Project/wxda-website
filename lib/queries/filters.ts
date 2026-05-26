@@ -106,7 +106,7 @@ export async function getDocumentFacetCounts(
 export async function getPersonFacetCounts(
   params: Pick<PersonSearchParams, 'q' | 'filters'>,
 ): Promise<FacetCounts> {
-  const { PERSON_MULTISELECT_FILTER_FIELDS, PERSON_SORT_KEY } = await getPersonConfig()
+  const { PERSON_MULTISELECT_FILTER_FIELDS } = await getPersonConfig()
 
   const results = await Promise.all(
     PERSON_MULTISELECT_FILTER_FIELDS.map(async (field) => {
