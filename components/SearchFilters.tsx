@@ -37,7 +37,7 @@ function countActive(d: FilterDraft): number {
   )
 }
 
-function buildURL(draft: FilterDraft, tab?: string): string {
+function buildURL(draft: FilterDraft, basePath: string, tab?: string): string {
   const p = new URLSearchParams()
   if (tab) p.set('tab', tab)
   if (draft.q) p.set('q', draft.q)
@@ -46,7 +46,7 @@ function buildURL(draft: FilterDraft, tab?: string): string {
   for (const [key, values] of Object.entries(draft.multiselects)) {
     values.forEach((v) => p.append(key, v))
   }
-  return `/search${p.toString() ? `?${p}` : ''}`
+  return `${basePath}${p.toString() ? `?${p}` : ''}`
 }
 
 // ── Multiselect group ──────────────────────────────────────────────────────
@@ -56,12 +56,14 @@ function MultiselectGroup({
   paramKey,
   options,
   selected,
+  counts,
   onChange,
 }: {
   label: string
   paramKey: string
   options: string[]
   selected: string[]
+  counts?: Record<string, number>
   onChange: (key: string, values: string[]) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -74,6 +76,11 @@ function MultiselectGroup({
       : [...selected, opt]
     onChange(paramKey, next)
   }
+
+  // When counts are available, hide options with zero count unless already selected
+  const visibleOptions = counts
+    ? options.filter((opt) => (counts[opt] ?? 0) > 0 || selected.includes(opt))
+    : options
 
   return (
     <div className="border-b border-border">
@@ -102,14 +109,15 @@ function MultiselectGroup({
 
       {open && (
         <ul id={groupId} className="pb-2 space-y-0.5" role="group" aria-label={label}>
-          {options.map((opt) => {
+          {visibleOptions.map((opt) => {
             const checked = selected.includes(opt)
+            const count = counts?.[opt] ?? 0
             const cbId = `cb-${paramKey}-${opt.replace(/[\s/()]+/g, '-')}`
             return (
               <li key={opt}>
                 <label
                   htmlFor={cbId}
-                  className={`flex items-start gap-2 text-sm cursor-pointer px-1 py-1 rounded transition-colors text-ink ${
+                  className={`flex items-center gap-2 text-sm cursor-pointer px-1 py-1 rounded transition-colors text-ink ${
                     checked ? 'bg-tag-bg' : 'bg-transparent'
                   }`}
                 >
@@ -120,7 +128,12 @@ function MultiselectGroup({
                     onChange={() => toggle(opt)}
                     className="mt-0.5 shrink-0 accent-crimson"
                   />
-                  <span>{opt}</span>
+                  <span className="flex-1 min-w-0">{opt}</span>
+                  {counts && (
+                    <span className="text-xs text-muted tabular-nums shrink-0">
+                      {count.toLocaleString()}
+                    </span>
+                  )}
                 </label>
               </li>
             )
@@ -203,14 +216,18 @@ interface SearchFiltersProps {
   filterFields: FieldConfig[]
   dateFilterField?: FieldConfig
   tab?: string
+  basePath?: string
   filterOptions: Record<string, string[]>
+  filterCounts?: Record<string, Record<string, number>>
 }
 
 export default function SearchFilters({
   filterFields,
   dateFilterField,
   tab,
+  basePath = '/search',
   filterOptions,
+  filterCounts,
 }: SearchFiltersProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -235,14 +252,14 @@ export default function SearchFilters({
   const urlDraft = draftFromParams(searchParams, multiselectFields)
   const activeCount = countActive(urlDraft)
   const draftCount = countActive(draft)
-  const isDirty = buildURL(draft, tab) !== buildURL(urlDraft, tab)
+  const isDirty = buildURL(draft, basePath, tab) !== buildURL(urlDraft, basePath, tab)
 
   function handleMultiselect(key: string, values: string[]) {
     setDraft((d) => ({ ...d, multiselects: { ...d.multiselects, [key]: values } }))
   }
 
   function apply() {
-    router.push(buildURL(draft, tab))
+    router.push(buildURL(draft, basePath, tab))
     setMobileOpen(false)
   }
 
@@ -252,7 +269,7 @@ export default function SearchFilters({
       emptyMultiselects[field.paramKey!] = []
     }
     setDraft({ q: '', date_from: '', date_to: '', multiselects: emptyMultiselects })
-    router.push(`/search${tab ? `?tab=${tab}` : ''}`)
+    router.push(`${basePath}${tab ? `?tab=${tab}` : ''}`)
     setMobileOpen(false)
   }
 
@@ -330,6 +347,7 @@ export default function SearchFilters({
             paramKey={field.paramKey!}
             options={filterOptions[field.paramKey!] ?? []}
             selected={draft.multiselects[field.paramKey!] ?? []}
+            counts={filterCounts?.[field.paramKey!]}
             onChange={handleMultiselect}
           />
         ))}
