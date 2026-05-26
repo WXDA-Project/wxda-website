@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import NavMenu from '@/components/NavMenu'
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,7 +8,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         Skip to main content
       </a>
 
-      <header className="bg-header-bg text-header-fg" role="banner">
+      <header className="bg-header-bg text-header-fg relative z-10" role="banner">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-4">
           <Link
             href="/"
@@ -17,25 +18,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <span className="sm:hidden">WXDA</span>
           </Link>
 
-          <nav aria-label="Main navigation">
-            <ul className="flex gap-4 sm:gap-6 list-none m-0 p-0 text-sm">
-              <li>
-                <Link href="/" className="hover:opacity-75 transition-opacity">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link href="/search" className="hover:opacity-75 transition-opacity whitespace-nowrap">
-                  Search Records
-                </Link>
-              </li>
-              <li>
-                <Link href="/map" className="hover:opacity-75 transition-opacity">
-                  Map
-                </Link>
-              </li>
-            </ul>
-          </nav>
+          <NavMenu />
         </div>
       </header>
 

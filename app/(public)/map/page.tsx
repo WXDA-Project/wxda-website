@@ -16,7 +16,7 @@ export default async function MapPage() {
       <p className="text-sm text-muted mb-4">
         {pins.length} locations · {docCount} document reference{docCount !== 1 ? 's' : ''}. Click a pin to see documents.
       </p>
-      <div className="border border-border rounded overflow-hidden h-[600px]">
+      <div className="border border-border rounded overflow-hidden h-[600px] isolate">
         <DocumentMap pins={pins} />
       </div>
     </div>
