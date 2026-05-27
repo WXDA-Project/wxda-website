@@ -152,8 +152,14 @@ wxda-website/
 │   │   │   └── page.tsx        # Single record detail page
 │   │   ├── person/[id]/
 │   │   │   └── page.tsx        # Single person profile page
-│   │   └── map/
-│   │       └── page.tsx        # Interactive map page
+│   │   ├── map/
+│   │   │   └── page.tsx        # Interactive map page
+│   │   ├── about/
+│   │   │   ├── page.tsx        # About the project (mission, acknowledgements, coverage)
+│   │   │   └── overview/
+│   │   │       └── page.tsx    # Project overview, aims, and methodology
+│   │   └── advisory-board/
+│   │       └── page.tsx        # Scholarly advisory board profiles
 │   ├── admin/                  # Admin area (separate minimal layout, no public nav)
 │   │   ├── layout.tsx          # Admin header (WXDA Admin label + sign out)
 │   │   ├── login/
@@ -167,13 +173,15 @@ wxda-website/
 │       └── signout/
 │           └── route.ts        # POST → signs out + redirects to /admin/login
 ├── components/
+│   ├── NavMenu.tsx              # Responsive nav — desktop dropdown + mobile drawer
 │   ├── HomeSearchBar.tsx        # Keyword search bar on the homepage
 │   ├── SearchFilters.tsx        # Faceted filter sidebar (records + persons)
 │   ├── ActiveFilters.tsx        # Active filter pill strip
 │   ├── Pagination.tsx           # Page navigation
 │   ├── TabNav.tsx               # Records / Persons tab switcher
 │   ├── TimelineChart.tsx        # SVG timeline chart on search results
-│   └── DocumentMap.tsx          # Leaflet map with clustering + heatmap
+│   ├── DocumentMap.tsx          # Leaflet map with clustering + heatmap
+│   └── DownloadPdfButton.tsx    # Client-side PDF export for record detail pages
 ├── lib/
 │   ├── supabase.ts              # Server-only public data client (anon key, no auth)
 │   ├── supabase/
@@ -210,6 +218,9 @@ wxda-website/
 | `/record/[id]` | Server | Detailed view of a single archive document |
 | `/person/[id]` | Server | Profile page for a named historical person |
 | `/map` | Server (shell) | Interactive Leaflet map (client component inside) |
+| `/about` | Server | About the project — mission, acknowledgements, coverage |
+| `/about/overview` | Server | Detailed project overview, aims, and methodology |
+| `/advisory-board` | Server | Profiles of the scholarly advisory board |
 | `/admin/login` | Client | Email/password login for admin access |
 | `/admin/fields` | Server | Field configuration editor (requires auth) |
 | `/auth/signout` | Route Handler | POST → sign out + redirect to login |
