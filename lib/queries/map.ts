@@ -101,5 +101,4 @@ export async function getMapPins(
 
   return Array.from(pinMap.values())
     .filter((p) => p.documents.length > 0)
-    .sort((a, b) => a.location.localeCompare(b.location))
 }
