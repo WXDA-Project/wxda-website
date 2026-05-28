@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Suspense, Fragment } from 'react'
+import { Suspense } from 'react'
 import {
   searchDocuments,
   searchDocumentDates,
@@ -122,38 +122,36 @@ function RecordResultsTable({
         </thead>
         <tbody>
           {records.map((record) => (
-            <Fragment key={record.id as number}>
-              <tr className="border-b border-border hover:bg-paper transition-colors">
-                {tableFields.map((f) => {
-                  const raw = record[f.key]
-                  const hideCls = f.hideOnTablet ? ' hidden lg:table-cell' : f.hideOnMobile ? ' hidden sm:table-cell' : ''
-                  if (f.key === summaryKey && record._headline) {
-                    return (
-                      <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}`}>
-                        <span dangerouslySetInnerHTML={{ __html: record._headline as string }} />
-                      </td>
-                    )
-                  }
-                  let display: string
-                  if (f.format === 'date') {
-                    display = formatDate(raw as string | null)
-                  } else {
-                    display = formatValue(raw)
-                    display = truncate(display, f.maxTableLength ?? 60)
-                  }
+            <tr key={record.id as number} className="border-b border-border hover:bg-paper transition-colors">
+              {tableFields.map((f) => {
+                const raw = record[f.key]
+                const hideCls = f.hideOnTablet ? ' hidden lg:table-cell' : f.hideOnMobile ? ' hidden sm:table-cell' : ''
+                if (f.key === summaryKey && record._headline) {
                   return (
-                    <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}${f.format === 'date' ? ' whitespace-nowrap' : ''}`}>
-                      {display}
+                    <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}`}>
+                      <span dangerouslySetInnerHTML={{ __html: record._headline as string }} />
                     </td>
                   )
-                })}
-                <td className="py-3 px-3 align-top w-[1%] whitespace-nowrap">
-                  <Link href={`/record/${record.id}`} className="text-xs font-semibold underline text-crimson">
-                    View<span className="sr-only"> record for {String(record.title ?? `#${record.id}`)}</span>
-                  </Link>
-                </td>
-              </tr>
-            </Fragment>
+                }
+                let display: string
+                if (f.format === 'date') {
+                  display = formatDate(raw as string | null)
+                } else {
+                  display = formatValue(raw)
+                  display = truncate(display, f.maxTableLength ?? 60)
+                }
+                return (
+                  <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}${f.format === 'date' ? ' whitespace-nowrap' : ''}`}>
+                    {display}
+                  </td>
+                )
+              })}
+              <td className="py-3 px-3 align-top w-[1%] whitespace-nowrap">
+                <Link href={`/record/${record.id}`} className="text-xs font-semibold underline text-crimson">
+                  View<span className="sr-only"> record for {String(record.title ?? `#${record.id}`)}</span>
+                </Link>
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
@@ -203,36 +201,34 @@ function PersonResultsTable({
           {records.map((person) => {
             const name = personDisplayName(person as unknown as PersonSummary, personConfig)
             return (
-              <Fragment key={person.id}>
-                <tr className="border-b border-border hover:bg-paper transition-colors">
-                  <td className="py-3 px-3 align-top">
-                    <Link href={`/person/${person.id}`} className="text-sm font-semibold hover:underline text-crimson no-underline">
-                      {name}
-                    </Link>
-                  </td>
-                  {personTableFields.map((f) => {
-                    const raw = person[f.key as keyof PersonRow]
-                    if (f.key === summaryKey && person._headline) {
-                      return (
-                        <td key={f.key} className="py-3 px-3 align-top hidden sm:table-cell text-ink">
-                          <span dangerouslySetInnerHTML={{ __html: person._headline as string }} />
-                        </td>
-                      )
-                    }
-                    const display = truncate(formatValue(raw), f.maxTableLength ?? 60)
+              <tr key={person.id} className="border-b border-border hover:bg-paper transition-colors">
+                <td className="py-3 px-3 align-top">
+                  <Link href={`/person/${person.id}`} className="text-sm font-semibold hover:underline text-crimson no-underline">
+                    {name}
+                  </Link>
+                </td>
+                {personTableFields.map((f) => {
+                  const raw = person[f.key as keyof PersonRow]
+                  if (f.key === summaryKey && person._headline) {
                     return (
                       <td key={f.key} className="py-3 px-3 align-top hidden sm:table-cell text-ink">
-                        {display}
+                        <span dangerouslySetInnerHTML={{ __html: person._headline as string }} />
                       </td>
                     )
-                  })}
-                  <td className="py-3 px-3 align-top w-[1%] whitespace-nowrap">
-                    <Link href={`/person/${person.id}`} className="text-xs font-semibold underline text-crimson">
-                      View<span className="sr-only"> person: {name}</span>
-                    </Link>
-                  </td>
-                </tr>
-              </Fragment>
+                  }
+                  const display = truncate(formatValue(raw), f.maxTableLength ?? 60)
+                  return (
+                    <td key={f.key} className="py-3 px-3 align-top hidden sm:table-cell text-ink">
+                      {display}
+                    </td>
+                  )
+                })}
+                <td className="py-3 px-3 align-top w-[1%] whitespace-nowrap">
+                  <Link href={`/person/${person.id}`} className="text-xs font-semibold underline text-crimson">
+                    View<span className="sr-only"> person: {name}</span>
+                  </Link>
+                </td>
+              </tr>
             )
           })}
         </tbody>
