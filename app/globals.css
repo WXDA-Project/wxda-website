@@ -101,6 +101,15 @@ button, input, select, textarea {
   font-family: inherit;
 }
 
+/* ── Search highlighting ────────────────────────────────────────────────── */
+
+mark {
+  background-color: #fde68a;
+  color: var(--color-ink);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
 /* ── Custom utilities ───────────────────────────────────────────────────── */
 
 @utility scheme-light {
