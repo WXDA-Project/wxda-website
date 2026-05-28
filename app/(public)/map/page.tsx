@@ -20,8 +20,7 @@ export default async function MapPage({
 }) {
   const sp = await searchParams
 
-  const { FILTER_FIELDS, DATE_FILTER_FIELD, MULTISELECT_FILTER_FIELDS } =
-    await getDocumentConfig()
+  const { FILTER_FIELDS, DATE_FILTER_FIELD, MULTISELECT_FILTER_FIELDS } = await getDocumentConfig()
 
   const q = (sp.q as string | undefined) ?? undefined
   const date_from = (sp.date_from as string | undefined) ?? undefined

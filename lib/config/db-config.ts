@@ -45,13 +45,23 @@ export interface RelationshipFieldConfig {
 // ── DB row types (snake_case from Supabase) ────────────────────────────────
 
 interface DocumentFieldRow {
-  id: number; key: string; label: string; role: string | null
-  filter_type: string | null; param_key: string | null
-  show_in_table: boolean; show_in_detail: boolean; is_array: boolean
-  hide_on_mobile: boolean; hide_on_tablet: boolean
-  format: string | null; max_table_length: number | null
-  enriched: boolean; show_in_doc_summary: boolean
-  min_date: string | null; max_date: string | null; sort_order: number
+  id: number; key: string;
+  label: string;
+  role: string | null;
+  filter_type: string | null;
+  param_key: string | null;
+  show_in_table: boolean;
+  show_in_detail: boolean;
+  is_array: boolean;
+  hide_on_mobile: boolean;
+  hide_on_tablet: boolean;
+  format: string | null;
+  max_table_length: number | null;
+  enriched: boolean;
+  show_in_doc_summary: boolean;
+  min_date: string | null;
+  max_date: string | null;
+  sort_order: number;
 }
 
 interface PersonFieldRow extends DocumentFieldRow {
