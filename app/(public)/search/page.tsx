@@ -21,68 +21,9 @@ import Pagination from '@/components/Pagination'
 import TabNav from '@/components/TabNav'
 import ActiveFilters from '@/components/ActiveFilters'
 import TimelineChart from '@/components/TimelineChart'
+import { normalise, formatDate, formatValue, truncate, extractSearchTerms, highlightSnippet } from '@/lib/search-utils'
 
 export const metadata: Metadata = { title: 'Search the Archive' }
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function normalise(v: string | string[] | undefined): string[] {
-  if (!v) return []
-  return Array.isArray(v) ? v : [v]
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr.length === 4 ? `${dateStr}-01-01` : dateStr)
-  if (isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : '—'
-  return String(value) || '—'
-}
-
-function truncate(str: string, max: number): string {
-  return str.length > max ? str.slice(0, max) + '…' : str
-}
-
-function extractSearchTerms(q: string): string[] {
-  const terms: string[] = []
-  const phraseRe = /"([^"]+)"/g
-  let m: RegExpExecArray | null
-  let remaining = q
-  while ((m = phraseRe.exec(q)) !== null) {
-    terms.push(m[1])
-    remaining = remaining.replace(m[0], ' ')
-  }
-  for (const word of remaining.split(/\s+/)) {
-    if (!word || word.toUpperCase() === 'OR' || word.startsWith('-')) continue
-    terms.push(word)
-  }
-  return terms.filter(Boolean)
-}
-
-function highlightSnippet(text: string, terms: string[], windowSize = 200): string | null {
-  if (!text || terms.length === 0) return null
-  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const pattern = new RegExp(`(${escaped.join('|')})`, 'gi')
-  const first = pattern.exec(text)
-  if (!first) return null
-  const center = first.index
-  const half = Math.floor(windowSize / 2)
-  const rawStart = Math.max(0, center - half)
-  const rawEnd = Math.min(text.length, rawStart + windowSize)
-  const start = Math.max(0, rawEnd - windowSize)
-  const end = rawEnd
-  let snippet = text.slice(start, end)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-  snippet = snippet.replace(new RegExp(`(${escaped.join('|')})`, 'gi'), '<mark>$1</mark>')
-  return (start > 0 ? '…' : '') + snippet + (end < text.length ? '…' : '')
-}
 
 // ── Record results table ───────────────────────────────────────────────────
 
