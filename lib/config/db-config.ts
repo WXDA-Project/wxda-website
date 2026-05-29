@@ -105,6 +105,14 @@ function toFieldConfig(row: DocumentFieldRow | PersonFieldRow): FieldConfig {
   }
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+export function requireField<T extends { role?: string | null }>(fields: T[], role: string, context: string): T {
+  const field = fields.find((f) => f.role === role)
+  if (!field) throw new Error(`Missing required field config: role "${role}" not found in ${context}`)
+  return field
+}
+
 // ── System columns (internal — not editable via admin) ─────────────────────
 
 export const FTS_COLUMN = 'fts' as const
@@ -133,17 +141,17 @@ export async function getDocumentConfig() {
   const ENRICHED_KEYS             = new Set(FIELDS.filter((f) => f.enriched).map((f) => f.key))
   const DOC_SUMMARY_COLUMNS       = ['id', ...FIELDS.filter((f) => f.showInDocSummary).map((f) => f.key)].join(', ')
 
-  const DATE_FILTER_FIELD   = FIELDS.find((f) => f.role === 'primary-date')!
+  const DATE_FILTER_FIELD   = requireField(FIELDS, 'primary-date', 'document_field_config')
   const SORT_DATE_KEY       = DATE_FILTER_FIELD.key
-  const LOCATION_FIELD_KEY  = FIELDS.find((f) => f.role === 'location')!.key
-  const AUTHOR_FIELD_KEY    = FIELDS.find((f) => f.role === 'author-ref')!.key
-  const CONTAINER_FIELD_KEY = FIELDS.find((f) => f.role === 'container-ref')!.key
-  const CITE_AS_KEY         = FIELDS.find((f) => f.role === 'citation')!.key
-  const SOURCE_URL_KEY      = FIELDS.find((f) => f.role === 'source-url')!.key
-  const DOC_TITLE_KEY       = FIELDS.find((f) => f.role === 'doc-title')!.key
-  const DOC_NAME_TITLE_KEY  = FIELDS.find((f) => f.role === 'doc-name-title')!.key
-  const DOC_SUMMARY_KEY     = FIELDS.find((f) => f.role === 'doc-summary')!.key
-  const DOC_CATEGORY_KEY    = FIELDS.find((f) => f.role === 'doc-category')!.key
+  const LOCATION_FIELD_KEY  = requireField(FIELDS, 'location', 'document_field_config').key
+  const AUTHOR_FIELD_KEY    = requireField(FIELDS, 'author-ref', 'document_field_config').key
+  const CONTAINER_FIELD_KEY = requireField(FIELDS, 'container-ref', 'document_field_config').key
+  const CITE_AS_KEY         = requireField(FIELDS, 'citation', 'document_field_config').key
+  const SOURCE_URL_KEY      = requireField(FIELDS, 'source-url', 'document_field_config').key
+  const DOC_TITLE_KEY       = requireField(FIELDS, 'doc-title', 'document_field_config').key
+  const DOC_NAME_TITLE_KEY  = requireField(FIELDS, 'doc-name-title', 'document_field_config').key
+  const DOC_SUMMARY_KEY     = requireField(FIELDS, 'doc-summary', 'document_field_config').key
+  const DOC_CATEGORY_KEY    = requireField(FIELDS, 'doc-category', 'document_field_config').key
 
   return {
     FIELDS, TABLE_FIELDS, DETAIL_FIELDS, FILTER_FIELDS, MULTISELECT_FILTER_FIELDS,
@@ -178,11 +186,11 @@ export async function getPersonConfig() {
   const PERSON_BADGE_KEYS                = PERSON_BADGE_FIELDS.map((f) => f.key)
   const PERSON_ENRICHMENT_COLUMNS        = ['id', ...FIELDS.filter((f) => f.showInEnrichment).map((f) => f.key)].join(', ')
 
-  const PERSON_SORT_KEY       = FIELDS.find((f) => f.role === 'person-sort')!.key
-  const PERSON_NAME_TITLE_KEY = FIELDS.find((f) => f.role === 'person-name-title')!.key
-  const PERSON_TITLE_KEY      = FIELDS.find((f) => f.role === 'person-title')!.key
-  const PERSON_TYPE_KEY       = FIELDS.find((f) => f.role === 'person-type')!.key
-  const PERSON_SUMMARY_KEY    = FIELDS.find((f) => f.role === 'person-summary')!.key
+  const PERSON_SORT_KEY       = requireField(FIELDS, 'person-sort', 'person_field_config').key
+  const PERSON_NAME_TITLE_KEY = requireField(FIELDS, 'person-name-title', 'person_field_config').key
+  const PERSON_TITLE_KEY      = requireField(FIELDS, 'person-title', 'person_field_config').key
+  const PERSON_TYPE_KEY       = requireField(FIELDS, 'person-type', 'person_field_config').key
+  const PERSON_SUMMARY_KEY    = requireField(FIELDS, 'person-summary', 'person_field_config').key
 
   return {
     FIELDS, PERSON_TABLE_FIELDS, PERSON_DETAIL_FIELDS,
@@ -212,11 +220,11 @@ export async function getContainerConfig() {
   }))
 
   const CONTAINER_SELECT_COLUMNS  = ['id', ...FIELDS.map((f) => f.key)].join(', ')
-  const CONTAINER_NAME_TITLE_KEY  = FIELDS.find((f) => f.role === 'container-name-title')!.key
-  const CONTAINER_SHORT_NAME_KEY  = FIELDS.find((f) => f.role === 'container-short-name')!.key
-  const CONTAINER_TITLE_KEY       = FIELDS.find((f) => f.role === 'container-title')!.key
-  const CONTAINER_SUMMARY_KEY     = FIELDS.find((f) => f.role === 'container-summary')!.key
-  const CONTAINER_SOURCE_URL_KEY  = FIELDS.find((f) => f.role === 'container-source-url')!.key
+  const CONTAINER_NAME_TITLE_KEY  = requireField(FIELDS, 'container-name-title', 'container_field_config').key
+  const CONTAINER_SHORT_NAME_KEY  = requireField(FIELDS, 'container-short-name', 'container_field_config').key
+  const CONTAINER_TITLE_KEY       = requireField(FIELDS, 'container-title', 'container_field_config').key
+  const CONTAINER_SUMMARY_KEY     = requireField(FIELDS, 'container-summary', 'container_field_config').key
+  const CONTAINER_SOURCE_URL_KEY  = requireField(FIELDS, 'container-source-url', 'container_field_config').key
 
   return {
     FIELDS, CONTAINER_SELECT_COLUMNS,
@@ -242,9 +250,9 @@ export async function getRelationshipConfig() {
     id: r.id, key: r.key, role: r.role,
   }))
 
-  const RELATIONSHIP_SOURCE_KEY = FIELDS.find((f) => f.role === 'relationship-source')!.key
-  const RELATIONSHIP_TARGET_KEY = FIELDS.find((f) => f.role === 'relationship-target')!.key
-  const RELATIONSHIP_TYPE_KEY   = FIELDS.find((f) => f.role === 'relationship-type')!.key
+  const RELATIONSHIP_SOURCE_KEY = requireField(FIELDS, 'relationship-source', 'relationship_field_config').key
+  const RELATIONSHIP_TARGET_KEY = requireField(FIELDS, 'relationship-target', 'relationship_field_config').key
+  const RELATIONSHIP_TYPE_KEY   = requireField(FIELDS, 'relationship-type', 'relationship_field_config').key
 
   return { FIELDS, RELATIONSHIP_SOURCE_KEY, RELATIONSHIP_TARGET_KEY, RELATIONSHIP_TYPE_KEY }
 }
