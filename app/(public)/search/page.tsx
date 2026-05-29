@@ -48,14 +48,52 @@ function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max) + '…' : str
 }
 
+function extractSearchTerms(q: string): string[] {
+  const terms: string[] = []
+  const phraseRe = /"([^"]+)"/g
+  let m: RegExpExecArray | null
+  let remaining = q
+  while ((m = phraseRe.exec(q)) !== null) {
+    terms.push(m[1])
+    remaining = remaining.replace(m[0], ' ')
+  }
+  for (const word of remaining.split(/\s+/)) {
+    if (!word || word.toUpperCase() === 'OR' || word.startsWith('-')) continue
+    terms.push(word)
+  }
+  return terms.filter(Boolean)
+}
+
+function highlightSnippet(text: string, terms: string[], windowSize = 200): string | null {
+  if (!text || terms.length === 0) return null
+  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const pattern = new RegExp(`(${escaped.join('|')})`, 'gi')
+  const first = pattern.exec(text)
+  if (!first) return null
+  const center = first.index
+  const half = Math.floor(windowSize / 2)
+  const rawStart = Math.max(0, center - half)
+  const rawEnd = Math.min(text.length, rawStart + windowSize)
+  const start = Math.max(0, rawEnd - windowSize)
+  const end = rawEnd
+  let snippet = text.slice(start, end)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  snippet = snippet.replace(new RegExp(`(${escaped.join('|')})`, 'gi'), '<mark>$1</mark>')
+  return (start > 0 ? '…' : '') + snippet + (end < text.length ? '…' : '')
+}
+
 // ── Record results table ───────────────────────────────────────────────────
 
 function RecordResultsTable({
   records,
   tableFields,
+  summaryKey,
 }: {
   records: Record<string, unknown>[]
   tableFields: FieldConfig[]
+  summaryKey?: string
 }) {
   if (records.length === 0) {
     return (
@@ -87,6 +125,14 @@ function RecordResultsTable({
             <tr key={record.id as number} className="border-b border-border hover:bg-paper transition-colors">
               {tableFields.map((f) => {
                 const raw = record[f.key]
+                const hideCls = f.hideOnTablet ? ' hidden lg:table-cell' : f.hideOnMobile ? ' hidden sm:table-cell' : ''
+                if (f.key === summaryKey && record._headline) {
+                  return (
+                    <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}`}>
+                      <span dangerouslySetInnerHTML={{ __html: record._headline as string }} />
+                    </td>
+                  )
+                }
                 let display: string
                 if (f.format === 'date') {
                   display = formatDate(raw as string | null)
@@ -94,7 +140,6 @@ function RecordResultsTable({
                   display = formatValue(raw)
                   display = truncate(display, f.maxTableLength ?? 60)
                 }
-                const hideCls = f.hideOnTablet ? ' hidden lg:table-cell' : f.hideOnMobile ? ' hidden sm:table-cell' : ''
                 return (
                   <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}${f.format === 'date' ? ' whitespace-nowrap' : ''}`}>
                     {display}
@@ -120,10 +165,12 @@ function PersonResultsTable({
   records,
   personTableFields,
   personConfig,
+  summaryKey,
 }: {
   records: PersonRow[]
   personTableFields: FieldConfig[]
   personConfig: { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string }
+  summaryKey?: string
 }) {
   if (records.length === 0) {
     return (
@@ -162,6 +209,13 @@ function PersonResultsTable({
                 </td>
                 {personTableFields.map((f) => {
                   const raw = person[f.key as keyof PersonRow]
+                  if (f.key === summaryKey && person._headline) {
+                    return (
+                      <td key={f.key} className="py-3 px-3 align-top hidden sm:table-cell text-ink">
+                        <span dangerouslySetInnerHTML={{ __html: person._headline as string }} />
+                      </td>
+                    )
+                  }
                   const display = truncate(formatValue(raw), f.maxTableLength ?? 60)
                   return (
                     <td key={f.key} className="py-3 px-3 align-top hidden sm:table-cell text-ink">
@@ -203,7 +257,7 @@ export default async function SearchPage({
   // ── Records search ─────────────────────────────────────────────────────────
   if (tab === 'records') {
     const [docConfig] = await Promise.all([getDocumentConfig()])
-    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD } = docConfig
+    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD, DOC_SUMMARY_KEY } = docConfig
 
     const date_from = (sp.date_from as string | undefined) ?? undefined
     const date_to = (sp.date_to as string | undefined) ?? undefined
@@ -220,6 +274,18 @@ export default async function SearchPage({
       getDocumentFilterOptions(),
       getDocumentFacetCounts({ q, date_from, date_to, filters }),
     ])
+
+    const searchTerms = q?.trim() ? extractSearchTerms(q) : []
+    if (searchTerms.length > 0) {
+      for (const record of result.records) {
+        const summary = record[DOC_SUMMARY_KEY] as string | null
+        if (summary) {
+          const hl = highlightSnippet(summary, searchTerms)
+          if (hl) record._headline = hl
+        }
+      }
+    }
+
     const firstResult = (page - 1) * PAGE_SIZE + 1
     const lastResult = Math.min(page * PAGE_SIZE, result.total)
 
@@ -254,7 +320,7 @@ export default async function SearchPage({
               minDate={DATE_FILTER_FIELD.minDate!}
               maxDate={DATE_FILTER_FIELD.maxDate!}
             />
-            <RecordResultsTable records={result.records} tableFields={TABLE_FIELDS} />
+            <RecordResultsTable records={result.records} tableFields={TABLE_FIELDS} summaryKey={DOC_SUMMARY_KEY} />
             <Suspense>
               <Pagination currentPage={result.page} totalPages={result.totalPages} />
             </Suspense>
@@ -266,7 +332,7 @@ export default async function SearchPage({
 
   // ── Persons search ─────────────────────────────────────────────────────────
   const personConfig = await getPersonConfig()
-  const { PERSON_TABLE_FIELDS, PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS } = personConfig
+  const { PERSON_TABLE_FIELDS, PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_SUMMARY_KEY } = personConfig
 
   const filters: Record<string, string[]> = {}
   for (const field of PERSON_MULTISELECT_FILTER_FIELDS) {
@@ -279,6 +345,17 @@ export default async function SearchPage({
     getPersonFilterOptions(),
     getPersonFacetCounts({ q, filters }),
   ])
+
+  const searchTerms = q?.trim() ? extractSearchTerms(q) : []
+  if (searchTerms.length > 0) {
+    for (const person of result.records) {
+      const summary = person[PERSON_SUMMARY_KEY] as string | null
+      if (summary) {
+        const hl = highlightSnippet(summary, searchTerms)
+        if (hl) person._headline = hl
+      }
+    }
+  }
   const firstResult = (page - 1) * PAGE_SIZE + 1
   const lastResult = Math.min(page * PAGE_SIZE, result.total)
 
@@ -311,6 +388,7 @@ export default async function SearchPage({
             records={result.records}
             personTableFields={PERSON_TABLE_FIELDS}
             personConfig={personConfig}
+            summaryKey={PERSON_SUMMARY_KEY}
           />
           <Suspense>
             <Pagination currentPage={result.page} totalPages={result.totalPages} />
