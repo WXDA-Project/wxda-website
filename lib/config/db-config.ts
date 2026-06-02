@@ -24,8 +24,6 @@ export interface FieldConfig {
   enriched?: boolean
   showInDocSummary?: boolean
   showInEnrichment?: boolean
-  minDate?: string | null
-  maxDate?: string | null
   sortOrder: number
 }
 
@@ -59,8 +57,6 @@ interface DocumentFieldRow {
   max_table_length: number | null;
   enriched: boolean;
   show_in_doc_summary: boolean;
-  min_date: string | null;
-  max_date: string | null;
   sort_order: number;
 }
 
@@ -99,8 +95,6 @@ function toFieldConfig(row: DocumentFieldRow | PersonFieldRow): FieldConfig {
     enriched: row.enriched,
     showInDocSummary: row.show_in_doc_summary,
     showInEnrichment: 'show_in_enrichment' in personRow ? personRow.show_in_enrichment : undefined,
-    minDate: row.min_date,
-    maxDate: row.max_date,
     sortOrder: row.sort_order,
   }
 }

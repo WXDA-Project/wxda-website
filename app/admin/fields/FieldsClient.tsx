@@ -78,14 +78,6 @@ const BASE_DOC_COLS: ColDef[] = [
     key: 'show_in_doc_summary', label: 'Show in Doc Summary', type: 'boolean',
     help: 'Include this field when listing documents on a person\'s profile page. Turn on for fields like title, date, and category.',
   },
-  {
-    key: 'min_date', label: 'Min Date', type: 'text',
-    help: 'Earliest selectable date for the date range filter, in YYYY-MM-DD format. Also sets the left edge of the timeline chart.',
-  },
-  {
-    key: 'max_date', label: 'Max Date', type: 'text',
-    help: 'Latest selectable date for the date range filter, in YYYY-MM-DD format. Also sets the right edge of the timeline chart.',
-  },
 ]
 
 const PERSON_EXTRA_COLS: ColDef[] = [

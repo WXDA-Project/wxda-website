@@ -223,7 +223,7 @@ wxda-website/
 | `/advisory-board` | Server | Profiles of the scholarly advisory board |
 | `/admin/login` | Client | Email/password login for admin access |
 | `/admin/fields` | Server | Field configuration editor (requires auth) |
-| `/auth/signout` | Route Handler | POST → sign out + redirect to login |
+| `/api/auth/signout` | Route Handler | POST → sign out + redirect to login |
 
 All public routes are server components by default. Client components (`'use client'`) are used only where browser APIs or interactivity is required: the search bar, filters, pagination, map, timeline chart, and admin edit dialog.
 

@@ -155,8 +155,8 @@ function DateRangeGroup({
 }: {
   dateFrom: string
   dateTo: string
-  minDate: string
-  maxDate: string
+  minDate?: string
+  maxDate?: string
   onChange: (from: string, to: string) => void
 }) {
   const MIN = minDate
@@ -215,6 +215,7 @@ function DateRangeGroup({
 interface SearchFiltersProps {
   filterFields: FieldConfig[]
   dateFilterField?: FieldConfig
+  dateBounds?: { min: string; max: string }
   tab?: string
   basePath?: string
   filterOptions: Record<string, string[]>
@@ -224,6 +225,7 @@ interface SearchFiltersProps {
 export default function SearchFilters({
   filterFields,
   dateFilterField,
+  dateBounds,
   tab,
   basePath = '/search',
   filterOptions,
@@ -332,8 +334,8 @@ export default function SearchFilters({
             <DateRangeGroup
               dateFrom={draft.date_from}
               dateTo={draft.date_to}
-              minDate={dateFilterField.minDate!}
-              maxDate={dateFilterField.maxDate!}
+              minDate={dateBounds?.min}
+              maxDate={dateBounds?.max}
               onChange={(from, to) => setDraft((d) => ({ ...d, date_from: from, date_to: to }))}
             />
           </div>
