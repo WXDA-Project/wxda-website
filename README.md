@@ -371,7 +371,7 @@ All field configuration (column names, labels, filter types, display flags, role
 | `container_field_config` | `containers` | Containers |
 | `relationship_field_config` | `relationships` | Relationships |
 
-**To change any field** — log in at `/admin/login` and edit through the admin UI. No code changes or redeployment needed.
+**To change any field** — log in at `/admin/login` and edit through the admin UI. No code changes or redeployment needed. See [docs/admin-guide.md](docs/admin-guide.md) for a full reference.
 
 ### Runtime config layer — `lib/config/db-config.ts`
 

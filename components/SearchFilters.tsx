@@ -12,20 +12,27 @@ interface FilterDraft {
   date_to: string
   /** paramKey → selected values for every multiselect filter in the current tab */
   multiselects: Record<string, string[]>
+  /** paramKey → value for every text filter in the current tab */
+  textFilters: Record<string, string>
 }
 
 // ── Pure helpers (no component state) ─────────────────────────────────────
 
-function draftFromParams(sp: URLSearchParams, multiselectFields: FieldConfig[]): FilterDraft {
+function draftFromParams(sp: URLSearchParams, multiselectFields: FieldConfig[], textFilterFields: FieldConfig[]): FilterDraft {
   const multiselects: Record<string, string[]> = {}
   for (const field of multiselectFields) {
     multiselects[field.paramKey!] = sp.getAll(field.paramKey!)
+  }
+  const textFilters: Record<string, string> = {}
+  for (const field of textFilterFields) {
+    textFilters[field.paramKey!] = sp.get(field.paramKey!) ?? ''
   }
   return {
     q: sp.get('q') ?? '',
     date_from: sp.get('date_from') ?? '',
     date_to: sp.get('date_to') ?? '',
     multiselects,
+    textFilters,
   }
 }
 
@@ -33,7 +40,8 @@ function countActive(d: FilterDraft): number {
   return (
     (d.q ? 1 : 0) +
     (d.date_from || d.date_to ? 1 : 0) +
-    Object.values(d.multiselects).reduce((sum, arr) => sum + arr.length, 0)
+    Object.values(d.multiselects).reduce((sum, arr) => sum + arr.length, 0) +
+    Object.values(d.textFilters).filter(Boolean).length
   )
 }
 
@@ -45,6 +53,9 @@ function buildURL(draft: FilterDraft, basePath: string, tab?: string): string {
   if (draft.date_to) p.set('date_to', draft.date_to)
   for (const [key, values] of Object.entries(draft.multiselects)) {
     values.forEach((v) => p.append(key, v))
+  }
+  for (const [key, value] of Object.entries(draft.textFilters)) {
+    if (value) p.set(key, value)
   }
   return `${basePath}${p.toString() ? `?${p}` : ''}`
 }
@@ -237,21 +248,22 @@ export default function SearchFilters({
   // Derive sub-lists once (stable within a given tab render)
   const hasDateRange = filterFields.some((f) => f.filterType === 'date-range')
   const multiselectFields = filterFields.filter((f) => f.filterType === 'multiselect')
+  const textFilterFields = filterFields.filter((f) => f.filterType === 'text')
 
   const spStr = searchParams.toString()
   const [prevSpStr, setPrevSpStr] = useState(spStr)
   const [draft, setDraft] = useState<FilterDraft>(() =>
-    draftFromParams(searchParams, multiselectFields),
+    draftFromParams(searchParams, multiselectFields, textFilterFields),
   )
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Re-sync draft when URL changes externally (pill X clicks, clear all, tab switches)
   if (prevSpStr !== spStr) {
     setPrevSpStr(spStr)
-    setDraft(draftFromParams(searchParams, multiselectFields))
+    setDraft(draftFromParams(searchParams, multiselectFields, textFilterFields))
   }
 
-  const urlDraft = draftFromParams(searchParams, multiselectFields)
+  const urlDraft = draftFromParams(searchParams, multiselectFields, textFilterFields)
   const activeCount = countActive(urlDraft)
   const draftCount = countActive(draft)
   const isDirty = buildURL(draft, basePath, tab) !== buildURL(urlDraft, basePath, tab)
@@ -267,10 +279,10 @@ export default function SearchFilters({
 
   function clearAll() {
     const emptyMultiselects: Record<string, string[]> = {}
-    for (const field of multiselectFields) {
-      emptyMultiselects[field.paramKey!] = []
-    }
-    setDraft({ q: '', date_from: '', date_to: '', multiselects: emptyMultiselects })
+    for (const field of multiselectFields) emptyMultiselects[field.paramKey!] = []
+    const emptyTextFilters: Record<string, string> = {}
+    for (const field of textFilterFields) emptyTextFilters[field.paramKey!] = ''
+    setDraft({ q: '', date_from: '', date_to: '', multiselects: emptyMultiselects, textFilters: emptyTextFilters })
     router.push(`${basePath}${tab ? `?tab=${tab}` : ''}`)
     setMobileOpen(false)
   }
@@ -340,6 +352,32 @@ export default function SearchFilters({
             />
           </div>
         )}
+
+        {/* Per-field text filters — ilike search on a specific column */}
+        {textFilterFields.map((field) => (
+          <div key={field.key} className="border-b border-border pb-3">
+            <label
+              htmlFor={`tf-${field.paramKey}`}
+              className="block py-2.5 text-sm font-semibold text-ink"
+            >
+              {field.label}
+            </label>
+            <input
+              id={`tf-${field.paramKey}`}
+              type="search"
+              value={draft.textFilters[field.paramKey!] ?? ''}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  textFilters: { ...d.textFilters, [field.paramKey!]: e.target.value },
+                }))
+              }
+              onKeyDown={(e) => { if (e.key === 'Enter') apply() }}
+              placeholder={`Filter by ${field.label.toLowerCase()}…`}
+              className="w-full px-3 py-2 text-sm rounded border border-border bg-paper text-ink"
+            />
+          </div>
+        ))}
 
         {/* Multiselect groups — driven entirely by the passed filterFields */}
         {multiselectFields.map((field) => (

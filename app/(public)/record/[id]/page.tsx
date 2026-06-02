@@ -107,7 +107,7 @@ export default async function RecordDetailPage({
   const [
     record,
     {
-      DETAIL_FIELDS, ENRICHED_KEYS,
+      DETAIL_FIELDS,
       AUTHOR_FIELD_KEY, CONTAINER_FIELD_KEY, CITE_AS_KEY, SOURCE_URL_KEY,
       SORT_DATE_KEY, DOC_TITLE_KEY, DOC_NAME_TITLE_KEY, DOC_SUMMARY_KEY,
       LOCATION_FIELD_KEY,
@@ -176,7 +176,7 @@ export default async function RecordDetailPage({
       rows: [{ label: '', value: enrichment.authors.map((p) => personDisplayName(p, personKeys)).join('; ') }],
     })
 
-  const detailRows = DETAIL_FIELDS.filter((f) => !ENRICHED_KEYS.has(f.key))
+  const detailRows = DETAIL_FIELDS
     .map((field) => {
       const v = field.format === 'date'
         ? formatDate(record[field.key] as string | null)
@@ -297,7 +297,7 @@ export default async function RecordDetailPage({
         <section aria-label="Record details">
           <SectionHeading>Full Record</SectionHeading>
           <dl className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-x-6 gap-y-3">
-            {DETAIL_FIELDS.filter((f) => !ENRICHED_KEYS.has(f.key)).map((field) => {
+            {DETAIL_FIELDS.map((field) => {
               // Location field: render each value with an optional map link
               if (field.key === LOCATION_FIELD_KEY) {
                 const locs = (record[field.key] as string[] | null) ?? []

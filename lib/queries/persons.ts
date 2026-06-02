@@ -7,6 +7,7 @@ import { PAGE_SIZE, PersonRow, PersonSummary } from './types'
 export interface PersonSearchParams {
   q?: string
   filters?: Record<string, string[]>
+  textFilters?: Record<string, string>
   page?: number
 }
 
@@ -21,7 +22,7 @@ export interface PersonSearchResult {
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export async function searchPersons(params: PersonSearchParams): Promise<PersonSearchResult> {
-  const { PERSON_TABLE_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_SORT_KEY, PERSON_ENRICHMENT_COLUMNS } =
+  const { PERSON_TABLE_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_TEXT_FILTER_FIELDS, PERSON_SORT_KEY, PERSON_ENRICHMENT_COLUMNS } =
     await getPersonConfig()
 
   const PERSON_SEARCH_COLUMNS = [
@@ -48,6 +49,12 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
         ? query.overlaps(field.key, values)
         : query.in(field.key, values)
     }
+  }
+
+  for (const field of PERSON_TEXT_FILTER_FIELDS) {
+    if (field.isArray) continue
+    const value = params.textFilters?.[field.paramKey!]?.trim()
+    if (value) query = query.ilike(field.key, `%${value}%`)
   }
 
   query = query.order(PERSON_SORT_KEY, { ascending: true, nullsFirst: false }).range(from, to)

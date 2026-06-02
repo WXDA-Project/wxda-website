@@ -21,7 +21,6 @@ export interface FieldConfig {
   hideOnTablet?: boolean
   format?: 'date' | null
   maxTableLength?: number | null
-  enriched?: boolean
   showInDocSummary?: boolean
   showInEnrichment?: boolean
   sortOrder: number
@@ -55,7 +54,6 @@ interface DocumentFieldRow {
   hide_on_tablet: boolean;
   format: string | null;
   max_table_length: number | null;
-  enriched: boolean;
   show_in_doc_summary: boolean;
   sort_order: number;
 }
@@ -92,7 +90,6 @@ function toFieldConfig(row: DocumentFieldRow | PersonFieldRow): FieldConfig {
     hideOnTablet: row.hide_on_tablet,
     format: row.format as 'date' | null,
     maxTableLength: row.max_table_length,
-    enriched: row.enriched,
     showInDocSummary: row.show_in_doc_summary,
     showInEnrichment: 'show_in_enrichment' in personRow ? personRow.show_in_enrichment : undefined,
     sortOrder: row.sort_order,
@@ -132,7 +129,7 @@ export async function getDocumentConfig() {
   const DETAIL_FIELDS             = FIELDS.filter((f) => f.showInDetail)
   const FILTER_FIELDS             = FIELDS.filter((f) => f.filterType)
   const MULTISELECT_FILTER_FIELDS = FIELDS.filter((f) => f.filterType === 'multiselect')
-  const ENRICHED_KEYS             = new Set(FIELDS.filter((f) => f.enriched).map((f) => f.key))
+  const TEXT_FILTER_FIELDS        = FIELDS.filter((f) => f.filterType === 'text')
   const DOC_SUMMARY_COLUMNS       = ['id', ...FIELDS.filter((f) => f.showInDocSummary).map((f) => f.key)].join(', ')
 
   const DATE_FILTER_FIELD   = requireField(FIELDS, 'primary-date', 'document_field_config')
@@ -148,8 +145,8 @@ export async function getDocumentConfig() {
   const DOC_CATEGORY_KEY    = requireField(FIELDS, 'doc-category', 'document_field_config').key
 
   return {
-    FIELDS, TABLE_FIELDS, DETAIL_FIELDS, FILTER_FIELDS, MULTISELECT_FILTER_FIELDS,
-    ENRICHED_KEYS, DOC_SUMMARY_COLUMNS,
+    FIELDS, TABLE_FIELDS, DETAIL_FIELDS, FILTER_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS,
+    DOC_SUMMARY_COLUMNS,
     DATE_FILTER_FIELD, SORT_DATE_KEY, LOCATION_FIELD_KEY,
     AUTHOR_FIELD_KEY, CONTAINER_FIELD_KEY, CITE_AS_KEY, SOURCE_URL_KEY,
     DOC_TITLE_KEY, DOC_NAME_TITLE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY,
@@ -176,6 +173,7 @@ export async function getPersonConfig() {
   const PERSON_DETAIL_FIELDS             = FIELDS.filter((f) => f.showInDetail)
   const PERSON_FILTER_FIELDS             = FIELDS.filter((f) => f.filterType)
   const PERSON_MULTISELECT_FILTER_FIELDS = FIELDS.filter((f) => f.filterType === 'multiselect')
+  const PERSON_TEXT_FILTER_FIELDS        = FIELDS.filter((f) => f.filterType === 'text')
   const PERSON_BADGE_FIELDS              = FIELDS.filter((f) => f.badge)
   const PERSON_BADGE_KEYS                = PERSON_BADGE_FIELDS.map((f) => f.key)
   const PERSON_ENRICHMENT_COLUMNS        = ['id', ...FIELDS.filter((f) => f.showInEnrichment).map((f) => f.key)].join(', ')
@@ -188,7 +186,7 @@ export async function getPersonConfig() {
 
   return {
     FIELDS, PERSON_TABLE_FIELDS, PERSON_DETAIL_FIELDS,
-    PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS,
+    PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_TEXT_FILTER_FIELDS,
     PERSON_BADGE_FIELDS, PERSON_BADGE_KEYS, PERSON_ENRICHMENT_COLUMNS,
     PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY,
     PERSON_TYPE_KEY, PERSON_SUMMARY_KEY,

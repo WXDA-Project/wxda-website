@@ -11,9 +11,10 @@ function formatDate(dateStr: string): string {
 
 interface ActiveFiltersProps {
   multiselectFields: FieldConfig[]
+  textFilterFields?: FieldConfig[]
 }
 
-export default function ActiveFilters({ multiselectFields }: ActiveFiltersProps) {
+export default function ActiveFilters({ multiselectFields, textFilterFields = [] }: ActiveFiltersProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -35,6 +36,10 @@ export default function ActiveFilters({ multiselectFields }: ActiveFiltersProps)
     searchParams.getAll(field.paramKey!).forEach((v) =>
       pills.push({ label: `${field.label}: ${v}`, removeKey: field.paramKey!, removeValue: v }),
     )
+  }
+  for (const field of textFilterFields) {
+    const v = searchParams.get(field.paramKey!)
+    if (v) pills.push({ label: `${field.label}: "${v}"`, removeKey: field.paramKey! })
   }
 
   if (pills.length === 0) return null

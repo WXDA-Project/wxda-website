@@ -20,27 +20,28 @@ interface ColDef {
 const BASE_DOC_COLS: ColDef[] = [
   {
     key: 'sort_order', label: 'Sort Order', type: 'number', tableVisible: true,
-    help: 'Display order — lower numbers appear first. Affects table columns, detail rows, and filter groups.',
+    help: 'Controls display order across the site — lower numbers appear first. Affects the order of table columns, the Full Record field list, and filter groups in the search sidebar.',
   },
   {
     key: 'key', label: 'Key', type: 'text', required: true, tableVisible: true,
-    help: 'Exact column name in the Supabase database. Must match the column name precisely — this is what queries use to SELECT and filter.',
+    help: 'The exact column name as it appears in Supabase. Must match precisely — this value is used directly in SELECT queries and filters.',
   },
   {
     key: 'label', label: 'Label', type: 'text', required: true, tableVisible: true,
-    help: 'The name shown to visitors — used in table headers, filter panel labels, and the detail page field list.',
+    help: 'The name shown to visitors. Appears in search table headers, filter labels, and the Full Record field list on record pages.',
   },
   {
-    key: 'role', label: 'Role', type: 'text', roleWarning: true, tableVisible: true,
-    help: 'Semantic tag that tells the code what this field is for (e.g. "primary-date", "author-ref"). Only one field should carry each role. Leave empty for ordinary display fields.',
+    key: 'role', label: 'Role', type: 'select', roleWarning: true, tableVisible: true,
+    options: ['', 'primary-date', 'location', 'author-ref', 'container-ref', 'citation', 'source-url', 'doc-title', 'doc-name-title', 'doc-summary', 'doc-category'],
+    help: 'Tells the code how to use this field. All roles in the list are required and must each be assigned to exactly one field — the site will break if any role is missing or duplicated. Leave blank for display-only fields.',
   },
   {
     key: 'filter_type', label: 'Filter Type', type: 'select', options: ['', 'text', 'date-range', 'multiselect'],
-    help: '"text" = free-text search input; "date-range" = from/to date picker; "multiselect" = checkbox list of all distinct values in the database. Leave empty for display-only fields (no filter).',
+    help: 'The type of filter control shown in the search sidebar. "text" = a text input that searches this specific column using a substring match (only works on non-array columns); "date-range" = from/to date pickers; "multiselect" = checkbox list of every distinct value in the database. Leave blank for fields with no filter.',
   },
   {
     key: 'param_key', label: 'Param Key', type: 'text',
-    help: 'URL query parameter name for this filter (e.g. "category" produces ?category=value in the address bar). Required whenever Filter Type is set.',
+    help: 'The URL parameter name for this filter. For example, "category" produces ?category=value in the address bar. Required whenever Filter Type is set.',
   },
   {
     key: 'show_in_table', label: 'Show in Table', type: 'boolean', tableVisible: true,
@@ -48,91 +49,142 @@ const BASE_DOC_COLS: ColDef[] = [
   },
   {
     key: 'show_in_detail', label: 'Show in Detail', type: 'boolean', tableVisible: true,
-    help: 'Show this field in the key–value list on the full record detail page.',
+    help: 'Show this field in the Full Record key–value list on record detail pages.',
   },
   {
     key: 'is_array', label: 'Is Array', type: 'boolean',
-    help: 'The database column stores multiple values (text[]). Required for multiselect filters to work correctly — enables an "overlaps" query instead of an exact match.',
+    help: 'Turn on if this column stores multiple values (text[] in PostgreSQL). Required for multiselect filters — uses an overlaps query instead of an exact match.',
   },
   {
     key: 'hide_on_mobile', label: 'Hide on Mobile', type: 'boolean',
-    help: 'Hide this table column on screens narrower than 640 px (phones).',
+    help: 'Hide this column from the search table on screens narrower than 640 px (phones).',
   },
   {
     key: 'hide_on_tablet', label: 'Hide on Tablet', type: 'boolean',
-    help: 'Hide this table column on screens narrower than 1024 px (tablets and small laptops).',
+    help: 'Hide this column from the search table on screens narrower than 1024 px (tablets and small laptops).',
   },
   {
     key: 'format', label: 'Format', type: 'select', options: ['', 'date'],
-    help: '"date" renders the value as a human-readable date (e.g. 3 Jun 1820). Leave empty to display the raw text value.',
+    help: 'How to display the raw value. "date" converts a stored date string to a readable format like "3 Jun 1820". Leave blank to show the value as-is.',
   },
   {
     key: 'max_table_length', label: 'Max Table Length', type: 'number',
-    help: 'Truncate long text in the search results table after this many characters. Leave empty to use the default (60).',
-  },
-  {
-    key: 'enriched', label: 'Enriched', type: 'boolean',
-    help: 'This field is displayed in a dedicated section on the record page (e.g. Author, Publication). Turn this on to prevent it from also appearing in the main field list — otherwise it shows twice.',
+    help: 'Maximum characters to show in the search table before truncating with an ellipsis. Defaults to 60 if left blank.',
   },
   {
     key: 'show_in_doc_summary', label: 'Show in Doc Summary', type: 'boolean',
-    help: 'Include this field when listing documents on a person\'s profile page. Turn on for fields like title, date, and category.',
+    help: 'Include this field when documents are listed on a person\'s profile page. Turn on for fields like title, date, and category.',
   },
 ]
 
-const PERSON_EXTRA_COLS: ColDef[] = [
+const PERSON_COLS: ColDef[] = [
+  {
+    key: 'sort_order', label: 'Sort Order', type: 'number', tableVisible: true,
+    help: 'Controls display order across the site — lower numbers appear first. Affects the order of table columns, the person detail field list, and filter groups in the search sidebar.',
+  },
+  {
+    key: 'key', label: 'Key', type: 'text', required: true, tableVisible: true,
+    help: 'The exact column name as it appears in Supabase. Must match precisely — this value is used directly in SELECT queries and filters.',
+  },
+  {
+    key: 'label', label: 'Label', type: 'text', required: true, tableVisible: true,
+    help: 'The name shown to visitors. Appears in search table headers, filter labels, and the field list on person detail pages.',
+  },
+  {
+    key: 'role', label: 'Role', type: 'select', roleWarning: true, tableVisible: true,
+    options: ['', 'person-sort', 'person-name-title', 'person-title', 'person-type', 'person-summary'],
+    help: 'Tells the code how to use this field. All roles in the list are required and must each be assigned to exactly one field — the site will break if any role is missing or duplicated. Leave blank for display-only fields.',
+  },
+  {
+    key: 'filter_type', label: 'Filter Type', type: 'select', options: ['', 'text', 'date-range', 'multiselect'],
+    help: 'The type of filter control shown in the search sidebar. "text" = a text input that searches this specific column using a substring match (only works on non-array columns); "date-range" = from/to date pickers; "multiselect" = checkbox list of every distinct value in the database. Leave blank for fields with no filter.',
+  },
+  {
+    key: 'param_key', label: 'Param Key', type: 'text',
+    help: 'The URL parameter name for this filter. For example, "type" produces ?type=value in the address bar. Required whenever Filter Type is set.',
+  },
+  {
+    key: 'show_in_table', label: 'Show in Table', type: 'boolean', tableVisible: true,
+    help: 'Show this field as a column in the persons search results table.',
+  },
+  {
+    key: 'show_in_detail', label: 'Show in Detail', type: 'boolean', tableVisible: true,
+    help: 'Show this field in the key–value list on person detail pages.',
+  },
+  {
+    key: 'is_array', label: 'Is Array', type: 'boolean',
+    help: 'Turn on if this column stores multiple values (text[] in PostgreSQL). Required for multiselect filters — uses an overlaps query instead of an exact match.',
+  },
+  {
+    key: 'hide_on_mobile', label: 'Hide on Mobile', type: 'boolean',
+    help: 'Hide this column from the search table on screens narrower than 640 px (phones).',
+  },
+  {
+    key: 'hide_on_tablet', label: 'Hide on Tablet', type: 'boolean',
+    help: 'Hide this column from the search table on screens narrower than 1024 px (tablets and small laptops).',
+  },
+  {
+    key: 'format', label: 'Format', type: 'select', options: ['', 'date'],
+    help: 'How to display the raw value. "date" converts a stored date string to a readable format like "3 Jun 1820". Leave blank to show the value as-is.',
+  },
+  {
+    key: 'max_table_length', label: 'Max Table Length', type: 'number',
+    help: 'Maximum characters to show in the search table before truncating with an ellipsis. Defaults to 60 if left blank.',
+  },
   {
     key: 'badge', label: 'Badge', type: 'boolean',
-    help: 'Display this field as a highlighted chip in the person profile header. Good for categorical fields like person type or social rank. The first badge field (by sort order) is styled as primary.',
+    help: 'Show this field as a highlighted chip in the person profile header. Best for short categorical values like type or rank. The first badge field by sort order gets the primary (accent colour) style; others get a secondary style.',
   },
   {
     key: 'show_in_enrichment', label: 'Show in Enrichment', type: 'boolean',
-    help: 'Include this field when a person is referenced from a document (e.g. as an author or mentioned person). Required for any field used in the display name or badge chips in non-person contexts.',
+    help: 'Include this field when fetching a person who appears on a record page (as an author or mentioned person). Turn on for any field that should be visible in the person chip or card shown on record pages — typically name, type, and summary.',
   },
 ]
 
 const CONTAINER_COLS: ColDef[] = [
   {
     key: 'sort_order', label: 'Sort Order', type: 'number', tableVisible: true,
-    help: 'Order in which this column appears in the SELECT query sent to the database.',
+    help: 'Controls the order columns are fetched in the SELECT query.',
   },
   {
     key: 'key', label: 'Key', type: 'text', required: true, tableVisible: true,
-    help: 'Exact column name in the containers table.',
+    help: 'The exact column name as it appears in the containers table in Supabase.',
   },
   {
-    key: 'role', label: 'Role', type: 'text', roleWarning: true, tableVisible: true,
-    help: 'Available roles: "container-name-title" (primary display name), "container-short-name" (abbreviated name), "container-title" (full title fallback), "container-summary" (description shown on record page), "container-source-url" (link shown on record page).',
+    key: 'role', label: 'Role', type: 'select', roleWarning: true, tableVisible: true,
+    options: ['', 'container-name-title', 'container-short-name', 'container-title', 'container-summary', 'container-source-url'],
+    help: 'Tells the code how to display this column in the Publication section on record pages. All roles in the list are required and must each be assigned to exactly one field.',
   },
 ]
 
 const RELATIONSHIP_COLS: ColDef[] = [
   {
     key: 'key', label: 'Key', type: 'text', required: true, tableVisible: true,
-    help: 'Exact column name in the relationships table.',
+    help: 'The exact column name as it appears in the relationships table in Supabase.',
   },
   {
-    key: 'role', label: 'Role', type: 'text', roleWarning: true, tableVisible: true,
-    help: 'All three roles must be assigned: "relationship-source" (the document ID column), "relationship-target" (the person ID column), "relationship-type" (the label column, e.g. "is Mentioned In"). Queries that link persons to documents depend on these.',
+    key: 'role', label: 'Role', type: 'select', roleWarning: true, tableVisible: true,
+    options: ['', 'relationship-source', 'relationship-target', 'relationship-type'],
+    help: 'Tells the code which column is which in the relationships table. All three roles are required — the site cannot link persons to documents without them. "relationship-source" = document ID column; "relationship-target" = person ID column; "relationship-type" = the label describing the relationship (e.g. "is Mentioned In").',
   },
 ]
 
 function getColDefs(table: AdminTable): ColDef[] {
   if (table === 'document_field_config') return BASE_DOC_COLS
-  if (table === 'person_field_config') return [...BASE_DOC_COLS, ...PERSON_EXTRA_COLS]
+  if (table === 'person_field_config') return PERSON_COLS
   if (table === 'container_field_config') return CONTAINER_COLS
   return RELATIONSHIP_COLS
 }
 
 const TABLE_DESCRIPTIONS: Record<AdminTable, string> = {
   document_field_config:
-    'Controls which columns appear on the Records search and record detail pages. Sort Order determines the order of table columns, filters, and detail rows.',
+    'Controls which fields appear on the Records search page and individual record pages. Sort Order sets the display order of table columns, filters, and the Full Record field list.',
   person_field_config:
-    'Controls which columns appear on the Persons search and person detail pages. Person-specific options include Badge (header chips) and Show in Enrichment (needed for display names and badges when a person is referenced from a document).',
+    'Controls which fields appear on the Persons search page and individual person pages. Badge fields appear as chips in the person profile header. Show in Enrichment controls which fields are available when a person appears on a record page (as an author or mentioned person).',
   container_field_config:
-    'Defines which columns are fetched from the containers table (publications, journals, series). Containers appear as enriched data on record detail pages — they are not browsed directly by visitors.',
+    'Controls which columns are fetched from the containers table (publications, journals, series). Containers are shown in a dedicated Publication section on record pages — they have no standalone browse page.',
   relationship_field_config:
-    'Defines the column names used to query the relationships table, which links persons to documents. All three roles must always be assigned — the code depends on them to join the tables correctly.',
+    'Maps the column names in the relationships table, which links persons to documents. All three role assignments are required — the code uses them to join the tables at query time.',
 }
 
 function defaultRow(cols: ColDef[]): Record<string, unknown> {

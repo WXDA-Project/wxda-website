@@ -9,6 +9,7 @@ export interface SearchParams {
   date_from?: string
   date_to?: string
   filters?: Record<string, string[]>
+  textFilters?: Record<string, string>
   page?: number
 }
 
@@ -29,7 +30,7 @@ export interface DocumentEnrichment {
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export async function searchDocuments(params: SearchParams): Promise<SearchResult> {
-  const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
+  const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
 
   const TABLE_COLUMNS = [...new Set(['id', ...TABLE_FIELDS.map((f) => f.key)])].join(', ')
 
@@ -52,6 +53,12 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
   for (const field of MULTISELECT_FILTER_FIELDS) {
     const values = params.filters?.[field.paramKey!] ?? []
     if (values.length > 0) query = query.overlaps(field.key, values)
+  }
+
+  for (const field of TEXT_FILTER_FIELDS) {
+    if (field.isArray) continue
+    const value = params.textFilters?.[field.paramKey!]?.trim()
+    if (value) query = query.ilike(field.key, `%${value}%`)
   }
 
   query = query.order(SORT_DATE_KEY, { ascending: true, nullsFirst: false }).range(from, to)
@@ -175,7 +182,7 @@ export async function getArchiveDates(): Promise<(string | null)[]> {
 export async function searchDocumentDates(
   params: Omit<SearchParams, 'page'>,
 ): Promise<(string | null)[]> {
-  const { MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
+  const { MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
 
   let query = supabase
     .from('documents')
@@ -191,6 +198,12 @@ export async function searchDocumentDates(
   for (const field of MULTISELECT_FILTER_FIELDS) {
     const values = params.filters?.[field.paramKey!] ?? []
     if (values.length > 0) query = query.overlaps(field.key, values)
+  }
+
+  for (const field of TEXT_FILTER_FIELDS) {
+    if (field.isArray) continue
+    const value = params.textFilters?.[field.paramKey!]?.trim()
+    if (value) query = query.ilike(field.key, `%${value}%`)
   }
 
   const { data } = await query

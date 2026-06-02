@@ -198,7 +198,7 @@ export default async function SearchPage({
   // ── Records search ─────────────────────────────────────────────────────────
   if (tab === 'records') {
     const [docConfig] = await Promise.all([getDocumentConfig()])
-    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD, DOC_SUMMARY_KEY } = docConfig
+    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD, DOC_SUMMARY_KEY } = docConfig
 
     const date_from = (sp.date_from as string | undefined) ?? undefined
     const date_to = (sp.date_to as string | undefined) ?? undefined
@@ -207,11 +207,16 @@ export default async function SearchPage({
       const vals = normalise(sp[field.paramKey!])
       if (vals.length > 0) filters[field.paramKey!] = vals
     }
+    const textFilters: Record<string, string> = {}
+    for (const field of TEXT_FILTER_FIELDS) {
+      const val = sp[field.paramKey!] as string | undefined
+      if (val) textFilters[field.paramKey!] = val
+    }
 
     const [result, archiveDates, filteredDates, filterOptions, filterCounts] = await Promise.all([
-      searchDocuments({ q, date_from, date_to, filters, page }),
+      searchDocuments({ q, date_from, date_to, filters, textFilters, page }),
       getArchiveDates(),
-      searchDocumentDates({ q, date_from, date_to, filters }),
+      searchDocumentDates({ q, date_from, date_to, filters, textFilters }),
       getDocumentFilterOptions(),
       getDocumentFacetCounts({ q, date_from, date_to, filters }),
     ])
@@ -255,7 +260,7 @@ export default async function SearchPage({
             </Suspense>
           </div>
           <div className="flex-1 min-w-0">
-            <ActiveFilters multiselectFields={MULTISELECT_FILTER_FIELDS} />
+            <ActiveFilters multiselectFields={MULTISELECT_FILTER_FIELDS} textFilterFields={TEXT_FILTER_FIELDS} />
             <p className="text-sm mb-3 text-muted">
               {result.total === 0 ? 'No records match your search.' : (
                 <>Showing <strong className="text-ink">{firstResult}–{lastResult}</strong> of <strong className="text-ink">{result.total.toLocaleString()}</strong> record{result.total !== 1 ? 's' : ''}</>
@@ -277,16 +282,21 @@ export default async function SearchPage({
 
   // ── Persons search ─────────────────────────────────────────────────────────
   const personConfig = await getPersonConfig()
-  const { PERSON_TABLE_FIELDS, PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_SUMMARY_KEY } = personConfig
+  const { PERSON_TABLE_FIELDS, PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_TEXT_FILTER_FIELDS, PERSON_SUMMARY_KEY } = personConfig
 
   const filters: Record<string, string[]> = {}
   for (const field of PERSON_MULTISELECT_FILTER_FIELDS) {
     const vals = normalise(sp[field.paramKey!])
     if (vals.length > 0) filters[field.paramKey!] = vals
   }
+  const textFilters: Record<string, string> = {}
+  for (const field of PERSON_TEXT_FILTER_FIELDS) {
+    const val = sp[field.paramKey!] as string | undefined
+    if (val) textFilters[field.paramKey!] = val
+  }
 
   const [result, filterOptions, filterCounts] = await Promise.all([
-    searchPersons({ q, filters, page }),
+    searchPersons({ q, filters, textFilters, page }),
     getPersonFilterOptions(),
     getPersonFacetCounts({ q, filters }),
   ])
@@ -323,7 +333,7 @@ export default async function SearchPage({
           </Suspense>
         </div>
         <div className="flex-1 min-w-0">
-          <ActiveFilters multiselectFields={PERSON_MULTISELECT_FILTER_FIELDS} />
+          <ActiveFilters multiselectFields={PERSON_MULTISELECT_FILTER_FIELDS} textFilterFields={PERSON_TEXT_FILTER_FIELDS} />
           <p className="text-sm mb-3 text-muted">
             {result.total === 0 ? 'No persons match your search.' : (
               <>Showing <strong className="text-ink">{firstResult}–{lastResult}</strong> of <strong className="text-ink">{result.total.toLocaleString()}</strong> person{result.total !== 1 ? 's' : ''}</>
