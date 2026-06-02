@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
+import { requireUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import FieldsClient from './FieldsClient'
 import type { AdminTable } from './actions'
@@ -54,9 +54,8 @@ async function AdminFieldsContent({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  const user = await requireUser()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/admin/login')
 
   const sp = await searchParams
   const tabParam = sp.tab as string | undefined

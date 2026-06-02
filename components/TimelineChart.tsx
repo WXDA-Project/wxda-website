@@ -18,13 +18,14 @@ function datesToBins(dates: (string | null)[], minYear: number, maxYear: number)
 interface Props {
   archiveDates: (string | null)[]
   filteredDates: (string | null)[]
-  minDate: string
-  maxDate: string
 }
 
-export default function TimelineChart({ archiveDates, filteredDates, minDate, maxDate }: Props) {
-  const MIN_YEAR = parseInt(minDate.slice(0, 4), 10)
-  const MAX_YEAR = parseInt(maxDate.slice(0, 4), 10)
+export default function TimelineChart({ archiveDates, filteredDates }: Props) {
+  const validYears = archiveDates.filter(Boolean).map((d) => parseInt((d as string).slice(0, 4), 10))
+  if (validYears.length === 0) return null
+
+  const MIN_YEAR = Math.min(...validYears)
+  const MAX_YEAR = Math.max(...validYears)
   const YEARS    = MAX_YEAR - MIN_YEAR + 1
   const BAR_SLOT = SVG_W / YEARS
   const BAR_W    = BAR_SLOT - 0.75
@@ -33,13 +34,16 @@ export default function TimelineChart({ archiveDates, filteredDates, minDate, ma
   const filtBins = datesToBins(filteredDates, MIN_YEAR, MAX_YEAR)
   const maxCount = Math.max(1, ...allBins.values())
 
-  const axisTicks: Array<{ year: number; anchor: 'start' | 'middle' | 'end' }> = [
-    { year: MIN_YEAR, anchor: 'start'  },
-    { year: 1800,     anchor: 'middle' },
-    { year: 1820,     anchor: 'middle' },
-    { year: 1840,     anchor: 'middle' },
-    { year: MAX_YEAR, anchor: 'end'    },
-  ]
+  // Generate ~5 evenly spaced axis ticks between min and max year
+  const tickCount = Math.min(5, YEARS)
+  const axisTicks: Array<{ year: number; anchor: 'start' | 'middle' | 'end' }> = Array.from(
+    { length: tickCount },
+    (_, i) => {
+      const year = Math.round(MIN_YEAR + (i / (tickCount - 1)) * (MAX_YEAR - MIN_YEAR))
+      const anchor = i === 0 ? 'start' : i === tickCount - 1 ? 'end' : 'middle'
+      return { year, anchor }
+    },
+  )
 
   function barHeight(count: number) {
     return (count / maxCount) * CHART_H
