@@ -216,6 +216,11 @@ export default async function SearchPage({
       getDocumentFacetCounts({ q, date_from, date_to, filters }),
     ])
 
+    const sortedDates = (archiveDates.filter(Boolean) as string[]).sort()
+    const dateBounds = sortedDates.length
+      ? { min: sortedDates[0], max: sortedDates[sortedDates.length - 1] }
+      : undefined
+
     const searchTerms = q?.trim() ? extractSearchTerms(q) : []
     if (searchTerms.length > 0) {
       for (const record of result.records) {
@@ -243,6 +248,7 @@ export default async function SearchPage({
               <SearchFilters
                 filterFields={FILTER_FIELDS}
                 dateFilterField={DATE_FILTER_FIELD}
+                dateBounds={dateBounds}
                 filterOptions={filterOptions}
                 filterCounts={filterCounts}
               />
@@ -258,8 +264,6 @@ export default async function SearchPage({
             <TimelineChart
               archiveDates={archiveDates}
               filteredDates={filteredDates}
-              minDate={DATE_FILTER_FIELD.minDate!}
-              maxDate={DATE_FILTER_FIELD.maxDate!}
             />
             <RecordResultsTable records={result.records} tableFields={TABLE_FIELDS} summaryKey={DOC_SUMMARY_KEY} />
             <Suspense>

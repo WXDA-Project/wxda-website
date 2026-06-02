@@ -5,7 +5,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <span className="text-sm font-semibold tracking-wide font-serif">
           WXDA Admin
         </span>
-        <form action="/auth/signout" method="POST">
+        <form action="/api/auth/signout" method="POST">
           <button
             type="submit"
             className="text-xs underline opacity-70 hover:opacity-100 transition-opacity bg-transparent border-0 cursor-pointer text-paper"

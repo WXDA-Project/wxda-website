@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import HomeSearchBar from '@/components/HomeSearchBar'
+import RandomEntryButton from '@/components/RandomEntryButton'
 
 export const metadata: Metadata = {
   title: 'Waterloo Cross-Dressing Archive',
@@ -41,7 +42,8 @@ export default function HomePage() {
           <p className="text-sm text-muted -mt-2">
             Or{' '}
             <Link href="/search">browse all records</Link>{' '}
-            using the full filter panel.
+            using the full filter panel, or visit a{' '}
+            <RandomEntryButton />.
           </p>
         </div>
       </div>
