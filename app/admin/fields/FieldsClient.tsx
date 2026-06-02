@@ -71,10 +71,6 @@ const BASE_DOC_COLS: ColDef[] = [
     key: 'max_table_length', label: 'Max Table Length', type: 'number',
     help: 'Maximum characters to show in the search table before truncating with an ellipsis. Defaults to 60 if left blank.',
   },
-  {
-    key: 'show_in_doc_summary', label: 'Show in Doc Summary', type: 'boolean',
-    help: 'Include this field when documents are listed on a person\'s profile page. Turn on for fields like title, date, and category.',
-  },
 ]
 
 const PERSON_COLS: ColDef[] = [
@@ -134,10 +130,6 @@ const PERSON_COLS: ColDef[] = [
   {
     key: 'badge', label: 'Badge', type: 'boolean',
     help: 'Show this field as a highlighted chip in the person profile header. Best for short categorical values like type or rank. The first badge field by sort order gets the primary (accent colour) style; others get a secondary style.',
-  },
-  {
-    key: 'show_in_enrichment', label: 'Show in Enrichment', type: 'boolean',
-    help: 'Include this field when fetching a person who appears on a record page (as an author or mentioned person). Turn on for any field that should be visible in the person chip or card shown on record pages — typically name, type, and summary.',
   },
 ]
 

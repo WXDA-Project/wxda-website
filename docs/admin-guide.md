@@ -78,7 +78,6 @@ Each tab's table shows a condensed view of the most important settings. Click **
 | `hide_on_tablet` | boolean | Hide this column on screens narrower than 1024 px. |
 | `format` | select | `date` converts a stored date string to a readable format like "3 Jun 1820". Leave blank to show the value as-is. |
 | `max_table_length` | number | Maximum characters to show in the search table before truncating. Defaults to 60 if blank. |
-| `show_in_doc_summary` | boolean | Include this field when documents are listed on a person's profile page. Turn on for fields like title, date, and category. |
 
 ### Person Fields
 
@@ -98,7 +97,6 @@ Each tab's table shows a condensed view of the most important settings. Click **
 | `format` | select | `date` converts a stored date string to a readable format like "3 Jun 1820". Leave blank to show the value as-is. |
 | `max_table_length` | number | Maximum characters to show in the search table before truncating. Defaults to 60 if blank. |
 | `badge` | boolean | Show this field as a highlighted chip in the person profile header. Best for short categorical values like type or rank. The first badge field by sort order gets the primary (accent) style; others get a secondary style. |
-| `show_in_enrichment` | boolean | Include this field when fetching a person who appears on a record page (as an author or mentioned person). Turn on for any field that should appear in the person chip or card on record pages — typically name, type, and summary. |
 
 ### Container Fields
 
