@@ -44,5 +44,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Claude Code local settings (personal overrides, not shared)
-.claude/settings.local.json
+# Claude Code / AI assistant config
+.claude/
+CLAUDE.md
+AGENTS.md
+skills-lock.json
+.mcp.json
