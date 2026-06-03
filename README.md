@@ -2,18 +2,16 @@
 
 [![CI](https://github.com/AndyX07/wxda-website/actions/workflows/ci.yml/badge.svg)](https://github.com/AndyX07/wxda-website/actions/workflows/ci.yml)
 
-A digital archive and research tool for historical records related to women's cross-dressing in eighteenth and nineteenth-century Britain. The site provides full-text search, faceted filtering, an interactive map, and structured person profiles drawn from a curated Supabase database.
+A digital archive and research tool for historical records related to women's cross-dressing in eighteenth and nineteenth-century Britain. The site provides full-text search, faceted filtering and an interactive map.
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 (App Router, React Server Components) |
-| Database | Supabase (PostgreSQL + Row Level Security) |
-| Styling | Tailwind CSS v4 with a custom design token layer |
-| Map | Leaflet + leaflet.markercluster + leaflet.heat |
-| Auth | `@supabase/ssr` (browser + server clients, session refresh via `proxy.ts`) |
-| Hosting | Vercel (recommended) |
+Next.js 16 (App Router) · Supabase · Tailwind CSS v4 · Leaflet · Vercel
+
+## Prerequisites
+
+- **Node.js 20.9+** and npm
+- **Docker** — only required for running E2E tests against a local Supabase instance
 
 ## Getting Started
 
@@ -28,8 +26,6 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 
 - **`NEXT_PUBLIC_SUPABASE_URL`**: your project URL — found in **Project Settings → General**. Format: `https://<project-id>.supabase.co`
 - **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`**: found in **Project Settings → API Keys**. Use the publishable key (format `sb_publishable_...`), not the legacy JWT anon key.
-
-Both the server data client (`lib/supabase.ts`) and the auth clients (`lib/supabase/client.ts`, `lib/supabase/server.ts`) read from the same `NEXT_PUBLIC_` vars. `NEXT_PUBLIC_` variables are available server-side too, so no duplicate pair is needed.
 
 ### Development
 
@@ -57,7 +53,7 @@ npm run test:watch    # watch mode
 npm run test:coverage # with coverage report
 ```
 
-Unit tests live in `tests/unit/`. Currently covers all branches of the display helper functions in `lib/queries/types.ts` (`documentDisplayTitle`, `personDisplayName`, `containerDisplayName`).
+Unit tests live in `tests/unit/`. Covers display helper functions in `lib/queries/types.ts` and search utilities in `lib/search-utils.ts`.
 
 ### E2E tests (Playwright)
 
@@ -83,19 +79,6 @@ The propagation tests mutate live data and revert it. **Run these against a loca
 ```bash
 npm run test:e2e -- tests/e2e/config-propagation.spec.ts
 ```
-
-The suite runs in serial mode (each test reverts its own changes before the next starts) and covers all four config tables:
-
-| Test | Tab | Property | Public UI target |
-|---|---|---|---|
-| 1 | Documents | `label` | Search column header |
-| 2 | Documents | `show_in_table` | Search column visibility |
-| 3 | Documents | `filter_type` | Filter sidebar multiselect group |
-| 4 | Persons | `label` | Persons search column header |
-| 5 | Persons | `show_in_table` | Persons search column visibility |
-| 6 | Persons | `filter_type` | Persons filter sidebar multiselect group |
-| 7 | Containers | `sort_order` | Cache invalidation (page still renders) |
-| 8 | Relationships | add + delete row | Admin table round-trip |
 
 ### Local Supabase (Docker)
 
@@ -132,8 +115,6 @@ The `.github/workflows/ci.yml` workflow runs on every push to `master` and on al
 
 The e2e job starts the full local Supabase stack with `supabase start`, which applies migrations and seeds the test admin user from `supabase/seed.sql`. Playwright then starts the Next.js dev server automatically via its `webServer` config. No secrets or committed env files are required — the workflow extracts the Supabase credentials from `supabase status` after startup and fails loudly if the key cannot be found.
 
-The Playwright HTML report is uploaded as a workflow artifact on failure, so broken tests can be inspected without re-running locally.
-
 ## Project Structure
 
 ```
@@ -169,9 +150,11 @@ wxda-website/
 │   │       ├── page.tsx        # Field config editor (4-tab CRUD table)
 │   │       ├── actions.ts      # saveField, addField, deleteField server actions
 │   │       └── FieldsClient.tsx # Client component — edit dialog + table
-│   └── auth/
-│       └── signout/
-│           └── route.ts        # POST → signs out + redirects to /admin/login
+│   └── api/
+│       ├── auth/signout/
+│       │   └── route.ts        # POST → signs out + redirects to /admin/login
+│       └── random-record/
+│           └── route.ts        # GET → returns a random public document ID
 ├── components/
 │   ├── NavMenu.tsx              # Responsive nav — desktop dropdown + mobile drawer
 │   ├── HomeSearchBar.tsx        # Keyword search bar on the homepage
@@ -184,6 +167,8 @@ wxda-website/
 │   └── DownloadPdfButton.tsx    # Client-side PDF export for record detail pages
 ├── lib/
 │   ├── supabase.ts              # Server-only public data client (anon key, no auth)
+│   ├── auth.ts                  # Server auth helpers
+│   ├── search-utils.ts          # Shared search/filter utilities
 │   ├── supabase/
 │   │   ├── client.ts           # Browser auth client (createBrowserClient)
 │   │   ├── server.ts           # Server auth client (createServerClient + cookies)
@@ -199,7 +184,8 @@ wxda-website/
 │       └── filters.ts          # Cached filter option generation
 ├── tests/
 │   ├── unit/
-│   │   └── display-helpers.test.ts  # Jest unit tests for display helper functions
+│   │   ├── display-helpers.test.ts  # Jest unit tests for display helper functions
+│   │   └── search-utils.test.ts     # Jest unit tests for search utilities
 │   └── e2e/
 │       ├── public.spec.ts           # Playwright: home, search, map, 404
 │       ├── admin.spec.ts            # Playwright: auth guard, login, field editor UI
@@ -209,27 +195,16 @@ wxda-website/
 └── public/                     # Static assets
 ```
 
-## Routes
+## API Routes
 
-| Route | Type | Description |
+| Route | Method | Description |
 |---|---|---|
-| `/` | Server | Homepage with search bar |
-| `/search` | Server | Full-text + faceted search across records and persons |
-| `/record/[id]` | Server | Detailed view of a single archive document |
-| `/person/[id]` | Server | Profile page for a named historical person |
-| `/map` | Server (shell) | Interactive Leaflet map (client component inside) |
-| `/about` | Server | About the project — mission, acknowledgements, coverage |
-| `/about/overview` | Server | Detailed project overview, aims, and methodology |
-| `/advisory-board` | Server | Profiles of the scholarly advisory board |
-| `/admin/login` | Client | Email/password login for admin access |
-| `/admin/fields` | Server | Field configuration editor (requires auth) |
-| `/api/auth/signout` | Route Handler | POST → sign out + redirect to login |
-
-All public routes are server components by default. Client components (`'use client'`) are used only where browser APIs or interactivity is required: the search bar, filters, pagination, map, timeline chart, and admin edit dialog.
+| `/api/auth/signout` | POST | Sign out + redirect to `/admin/login` |
+| `/api/random-record` | GET | Returns a random public document ID |
 
 ## Database
 
-The database lives in Supabase (PostgreSQL). All tables enforce **Row Level Security (RLS)**. The public-facing application connects using the anon key; no service role key is used in the client code.
+The database lives in Supabase (PostgreSQL). All tables enforce **Row Level Security (RLS)**.
 
 ### Entity–Relationship Overview
 
@@ -264,102 +239,6 @@ relationship_field_config┘
 
 > **Soft foreign keys**: All cross-table references are stored as `text` or `integer[]` columns with no PostgreSQL `FOREIGN KEY` constraint. The application resolves them in code.
 
----
-
-### Table: `documents`
-
-The core archive table. Each row is one historical record (pamphlet, newspaper article, court transcript, etc.).
-
-See `document_field_config` in the admin UI for the full column list and roles. Key columns:
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | `integer` | Primary key |
-| `visibility` | `text` | `public` or `viewable` — controls RLS access |
-| `fts` | `tsvector` | Full-text search vector (generated) |
-
-**RLS policy**: `visibility = 'public'` — only public rows are readable by the anon key.
-
----
-
-### Table: `persons`
-
-Named historical individuals referenced across the archive.
-
-See `person_field_config` in the admin UI for the full column list and roles. Key columns:
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | `integer` | Primary key |
-| `visibility` | `text` | `public` or `viewable` — controls RLS access |
-| `fts` | `tsvector` | Full-text search vector (generated) |
-
-**RLS policy**: `visibility IN ('public', 'viewable')` — both values are readable by the anon key.
-
----
-
-### Table: `relationships`
-
-A junction table linking persons to documents.
-
-See `relationship_field_config` in the admin UI for column names. Key columns:
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | `integer` | Primary key |
-| `relationship_type` | `text` | Nature of the link (e.g. `'is Mentioned In'`) |
-| `source_record_pointer` | `text` | ID of the source entity |
-| `target_record_pointer` | `text` | ID of the target entity |
-
-**RLS policy**: `visibility IN ('public', 'viewable')`.
-
----
-
-### Table: `containers`
-
-Publications, series, or collections that group documents.
-
-See `container_field_config` in the admin UI for column names.
-
-**RLS policy**: `true` (all rows readable by the anon key).
-
----
-
-### Table: `geocode_cache`
-
-Resolved latitude/longitude for location strings found in documents.
-
-| Column | Type | Description |
-|---|---|---|
-| `location` | `text` | Primary key — location string as it appears in documents |
-| `lat` | `double precision` | Latitude |
-| `lng` | `double precision` | Longitude |
-
-**RLS policy**: `true`. Used exclusively by `getMapPins()` in `lib/queries/map.ts`.
-
----
-
-### Typical Data Fetching Flows
-
-**Search page (records tab)** — `lib/queries/documents.ts`, `lib/queries/filters.ts`
-1. `searchDocuments()` — full-text + filter query on `documents`. Returns paginated rows.
-2. `searchDocumentDates()` — same query but `SELECT date` only, for the timeline chart.
-3. `getArchiveDates()` — all dates from `documents` (unfiltered), for the chart background.
-4. `getDocumentFilterOptions()` — cached (1 h) distinct values for every multiselect filter field.
-
-**Record detail page** — `lib/queries/documents.ts`
-1. `getDocument(id)` — fetches a single document row by ID.
-2. `getDocumentEnrichment(id)` — parallel queries for: the parent container, mentioned persons (via `relationships`), and author persons.
-
-**Person detail page** — `lib/queries/persons.ts`
-1. `getPerson(id)` — fetches a single person row by ID.
-2. `getPersonDocuments(id)` — fetches all documents linked to this person via `author_or_creator` or `relationships`.
-
-**Map page** — `lib/queries/map.ts`
-1. `getMapPins()` — joins `documents.locations_mentioned` against `geocode_cache` to produce `{ location, lat, lng, documents[] }` pins.
-
----
-
 ## Configuration System
 
 All field configuration (column names, labels, filter types, display flags, roles) is stored in four Supabase tables — one per entity:
@@ -373,93 +252,6 @@ All field configuration (column names, labels, filter types, display flags, role
 
 **To change any field** — log in at `/admin/login` and edit through the admin UI. No code changes or redeployment needed. See [docs/admin-guide.md](docs/admin-guide.md) for a full reference.
 
-### Runtime config layer — `lib/config/db-config.ts`
-
-Four async functions read from the four tables and expose typed constants:
-
-```ts
-const { TABLE_FIELDS, SORT_DATE_KEY, FILTER_FIELDS, ... } = await getDocumentConfig()
-const { PERSON_TABLE_FIELDS, PERSON_SORT_KEY, ... }        = await getPersonConfig()
-const { CONTAINER_SELECT_COLUMNS, CONTAINER_NAME_TITLE_KEY, ... } = await getContainerConfig()
-const { RELATIONSHIP_SOURCE_KEY, RELATIONSHIP_TARGET_KEY, ... }   = await getRelationshipConfig()
-```
-
-All four functions use `'use cache'` with `cacheLife('max')` (30-day revalidation) and `cacheTag('field-config')`. When an admin saves any change, `updateTag('field-config')` immediately expires all four caches.
-
-`FTS_COLUMN = 'fts'` and `VISIBILITY_COLUMN = 'visibility'` are TypeScript constants — not stored in the database, since they are internal implementation details that should never change.
-
-### Admin access
-
-Admin users are created manually in the Supabase dashboard (Authentication → Users). There is no self-registration.
-
-- **Login**: `/admin/login`
-- **Field editor**: `/admin/fields`
-- **Sign out**: button in the admin header
-
-Admin routes check `supabase.auth.getUser()` server-side and redirect to `/admin/login` if no authenticated user is found.
-
----
-
-## Visibility System
-
-The `visibility` column appears on all tables. Policies differ by table:
-
-| Table | Anon RLS policy |
-|---|---|
-| `documents` | `visibility = 'public'` only |
-| `persons` | `visibility IN ('public', 'viewable')` |
-| `relationships` | `visibility IN ('public', 'viewable')` |
-| `containers` | `true` (all rows) |
-| `geocode_cache` | `true` (all rows) |
-
-The application never uses the Supabase service role key. All queries run under the anon key and respect RLS automatically.
-
----
-
-## Caching
-
-With `cacheComponents: true` in `next.config.ts`, data fetching is **dynamic by default** — pages are not prerendered unless they explicitly use `'use cache'`. The two intentionally cached functions are:
-
-| Function | Cache life | Tag | Invalidated by |
-|---|---|---|---|
-| `getDocumentConfig()` / `getPersonConfig()` / `getContainerConfig()` / `getRelationshipConfig()` | `max` (30d revalidate) | `field-config` | `updateTag('field-config')` on admin save |
-| `getDocumentFilterOptions()` / `getPersonFilterOptions()` | `hours` (1h revalidate) | — | Time-based only |
-
-All other data fetching (search queries, record/person lookups, map pins) is fully dynamic — fetched fresh on every request.
-
----
-
 ## Design Tokens
 
-All colours, spacing, and typographic decisions are expressed as CSS custom properties in `app/globals.css` under a `@theme inline` block. Tailwind utilities and inline styles in SVG/Leaflet HTML both reference the same tokens via `var(--color-*)`.
-
-Key tokens:
-
-| Token | Usage |
-|---|---|
-| `--color-crimson` | Primary accent (buttons, links, active states) |
-| `--color-crimson-hover` | Hover state for crimson elements |
-| `--color-ink` | Primary text |
-| `--color-muted` | Secondary/subdued text |
-| `--color-paper` | Page background |
-| `--color-parchment` | Slightly warm background for sidebars |
-| `--color-border` | Dividers and input borders |
-| `--color-tag-bg` / `--color-tag-fg` | Filter tag chips |
-| `--color-on-accent` | Text/icons on crimson backgrounds |
-| `--color-overlay` | Modal/drawer backdrop |
-
-To restyle the site, update the token values in `app/globals.css` — no component changes needed.
-
----
-
-## Key Dependencies
-
-| Package | Purpose |
-|---|---|
-| `next` | Framework (App Router, server components, `'use cache'`) |
-| `@supabase/supabase-js` | Data client (server-only, anon key) |
-| `@supabase/ssr` | Auth client (browser + server, session management) |
-| `leaflet` | Interactive map |
-| `leaflet.markercluster` | Marker clustering for the map |
-| `leaflet.heat` | Heatmap layer for the map |
-| `tailwindcss` | Utility-first CSS framework |
+All colours, spacing, and typographic decisions are expressed as CSS custom properties in `app/globals.css` under a `@theme inline` block. Tailwind utilities and inline styles in SVG/Leaflet HTML both reference the same tokens via `var(--color-*)`. To restyle the site, update the token values there — no component changes needed.
