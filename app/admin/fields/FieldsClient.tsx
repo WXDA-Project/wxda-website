@@ -184,7 +184,7 @@ function defaultRow(cols: ColDef[]): Record<string, unknown> {
   for (const c of cols) {
     if (c.type === 'boolean') row[c.key] = false
     else if (c.type === 'number') row[c.key] = c.key === 'sort_order' ? 0 : null
-    else if (c.type === 'select') row[c.key] = ''
+    else if (c.type === 'select') row[c.key] = null
     else row[c.key] = ''
   }
   return row
