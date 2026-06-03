@@ -231,6 +231,7 @@ interface SearchFiltersProps {
   basePath?: string
   filterOptions: Record<string, string[]>
   filterCounts?: Record<string, Record<string, number>>
+  showKeywordSearch?: boolean
 }
 
 export default function SearchFilters({
@@ -241,6 +242,7 @@ export default function SearchFilters({
   basePath = '/search',
   filterOptions,
   filterCounts,
+  showKeywordSearch = true,
 }: SearchFiltersProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -315,30 +317,32 @@ export default function SearchFilters({
         </div>
       </div>
 
-      <div className="px-4 py-3 space-y-0">
+      <div className={`px-4 space-y-0 ${showKeywordSearch ? 'py-3' : 'pb-3'}`}>
         {/* Keyword search */}
-        <div className="border-b border-border pb-3">
-          <label
-            htmlFor="sidebar-q"
-            className="block text-sm font-semibold mb-1.5 text-ink"
-          >
-            Keyword Search
-          </label>
-          <input
-            id="sidebar-q"
-            type="search"
-            value={draft.q}
-            onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
-            onKeyDown={(e) => { if (e.key === 'Enter') apply() }}
-            placeholder="Search all fields…"
-            className="w-full px-3 py-2 text-sm rounded border border-border bg-paper text-ink"
-          />
-          <p className="mt-1.5 text-xs text-muted">
-            Use <code className="font-mono">&quot;phrases&quot;</code>,{' '}
-            <code className="font-mono">OR</code>,{' '}
-            <code className="font-mono">-exclusions</code>
-          </p>
-        </div>
+        {showKeywordSearch && (
+          <div className="border-b border-border pb-3">
+            <label
+              htmlFor="sidebar-q"
+              className="block text-sm font-semibold mb-1.5 text-ink"
+            >
+              Keyword Search
+            </label>
+            <input
+              id="sidebar-q"
+              type="search"
+              value={draft.q}
+              onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === 'Enter') apply() }}
+              placeholder="Search all fields…"
+              className="w-full px-3 py-2 text-sm rounded border border-border bg-paper text-ink"
+            />
+            <p className="mt-1.5 text-xs text-muted">
+              Use <code className="font-mono">&quot;phrases&quot;</code>,{' '}
+              <code className="font-mono">OR</code>,{' '}
+              <code className="font-mono">-exclusions</code>
+            </p>
+          </div>
+        )}
 
         {/* Date range — only shown when the field config includes a date-range filter */}
         {hasDateRange && dateFilterField && (

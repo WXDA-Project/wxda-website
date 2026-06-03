@@ -65,6 +65,7 @@ export default async function MapPage({
               filterOptions={filterOptions}
               filterCounts={filterCounts}
               basePath="/map"
+              showKeywordSearch={false}
             />
           </Suspense>
         </div>
