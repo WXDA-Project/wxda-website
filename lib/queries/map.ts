@@ -12,7 +12,7 @@ export interface MapPin {
 }
 
 export async function getGeocodedLocations(): Promise<string[]> {
-  'use cache'
+  'use cache: remote'
   cacheLife('hours')
   const { data } = await supabase
     .from('geocode_cache')

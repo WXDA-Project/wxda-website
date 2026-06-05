@@ -106,7 +106,7 @@ export const VISIBILITY_COLUMN = 'visibility' as const
 // ── Document config ────────────────────────────────────────────────────────
 
 export async function getDocumentConfig() {
-  'use cache'
+  'use cache: remote'
   cacheLife('max')
   cacheTag('field-config')
 
@@ -150,7 +150,7 @@ export async function getDocumentConfig() {
 // ── Person config ──────────────────────────────────────────────────────────
 
 export async function getPersonConfig() {
-  'use cache'
+  'use cache: remote'
   cacheLife('max')
   cacheTag('field-config')
 
@@ -190,7 +190,7 @@ export async function getPersonConfig() {
 // ── Container config ───────────────────────────────────────────────────────
 
 export async function getContainerConfig() {
-  'use cache'
+  'use cache: remote'
   cacheLife('max')
   cacheTag('field-config')
 
@@ -222,7 +222,7 @@ export async function getContainerConfig() {
 // ── Relationship config ────────────────────────────────────────────────────
 
 export async function getRelationshipConfig() {
-  'use cache'
+  'use cache: remote'
   cacheLife('max')
   cacheTag('field-config')
 

@@ -26,14 +26,14 @@ async function fetchFilterOptions(
 }
 
 export async function getDocumentFilterOptions(): Promise<Record<string, string[]>> {
-  'use cache'
+  'use cache: remote'
   cacheLife('hours')
   const { MULTISELECT_FILTER_FIELDS } = await getDocumentConfig()
   return fetchFilterOptions('documents', MULTISELECT_FILTER_FIELDS)
 }
 
 export async function getPersonFilterOptions(): Promise<Record<string, string[]>> {
-  'use cache'
+  'use cache: remote'
   cacheLife('hours')
   const { PERSON_MULTISELECT_FILTER_FIELDS } = await getPersonConfig()
   return fetchFilterOptions('persons', PERSON_MULTISELECT_FILTER_FIELDS)
