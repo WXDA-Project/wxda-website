@@ -1,3 +1,4 @@
+import { cacheLife } from 'next/cache'
 import { supabase } from '../supabase'
 import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getPersonConfig, getContainerConfig, getRelationshipConfig } from '../config/db-config'
 import { PAGE_SIZE, DocumentRow, PersonSummary, ContainerSummary } from './types'
@@ -171,6 +172,8 @@ export async function getDocumentEnrichment(
 }
 
 export async function getArchiveDates(): Promise<(string | null)[]> {
+  'use cache: remote'
+  cacheLife('hours')
   const { SORT_DATE_KEY } = await getDocumentConfig()
   const { data } = await supabase
     .from('documents')
