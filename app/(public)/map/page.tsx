@@ -22,7 +22,6 @@ export default async function MapPage({
 
   const { FILTER_FIELDS, DATE_FILTER_FIELD, MULTISELECT_FILTER_FIELDS } = await getDocumentConfig()
 
-  const q = (sp.q as string | undefined) ?? undefined
   const date_from = (sp.date_from as string | undefined) ?? undefined
   const date_to = (sp.date_to as string | undefined) ?? undefined
   const focus = (sp.focus as string | undefined) ?? undefined
@@ -39,9 +38,9 @@ export default async function MapPage({
   const locationRestriction = focus ? [focus] : geocodedLocations
 
   const [pins, filterOptions, filterCounts] = await Promise.all([
-    getMapPins({ q, date_from, date_to, filters, locationFocus: focus }),
+    getMapPins({ date_from, date_to, filters, locationFocus: focus }),
     getDocumentFilterOptions(),
-    getDocumentFacetCounts({ q, date_from, date_to, filters }, { locationRestriction }),
+    getDocumentFacetCounts({ date_from, date_to, filters }, { locationRestriction }),
   ])
 
   const docCount = pins.reduce((sum, p) => sum + p.documents.length, 0)

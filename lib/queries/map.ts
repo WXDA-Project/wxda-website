@@ -1,6 +1,6 @@
 import { cacheLife } from 'next/cache'
 import { supabase } from '../supabase'
-import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig } from '../config/db-config'
+import { VISIBILITY_COLUMN, getDocumentConfig } from '../config/db-config'
 import { documentDisplayTitle } from './types'
 import type { SearchParams } from './documents'
 
@@ -22,7 +22,7 @@ export async function getGeocodedLocations(): Promise<string[]> {
 }
 
 export async function getMapPins(
-  params?: Pick<SearchParams, 'q' | 'date_from' | 'date_to' | 'filters'> & {
+  params?: Pick<SearchParams, 'date_from' | 'date_to' | 'filters'> & {
     /** When set, restricts pins to documents that include this exact location value. */
     locationFocus?: string
   },
@@ -38,8 +38,6 @@ export async function getMapPins(
     .eq(VISIBILITY_COLUMN, 'public')
     .not(LOCATION_FIELD_KEY, 'is', null)
 
-  if (params?.q?.trim())
-    docsQuery = docsQuery.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
   if (params?.date_from) docsQuery = docsQuery.gte(SORT_DATE_KEY, params.date_from)
   if (params?.date_to)   docsQuery = docsQuery.lte(SORT_DATE_KEY, params.date_to)
   for (const field of MULTISELECT_FILTER_FIELDS) {
