@@ -81,7 +81,7 @@ export async function getDocumentFacetCounts(
         .eq(VISIBILITY_COLUMN, 'public')
 
       if (params.q?.trim())
-        query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
+        query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
       if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
       if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
 
@@ -116,7 +116,7 @@ export async function getPersonFacetCounts(
         .eq(VISIBILITY_COLUMN, 'public')
 
       if (params.q?.trim())
-        query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
+        query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
 
       for (const other of PERSON_MULTISELECT_FILTER_FIELDS) {
         if (other.paramKey === field.paramKey) continue

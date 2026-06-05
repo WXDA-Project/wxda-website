@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import SearchHelpTooltip from './SearchHelpTooltip'
 
 type SearchTab = 'records' | 'persons'
 
@@ -55,8 +56,8 @@ export default function HomeSearchBar() {
           onChange={(e) => setQ(e.target.value)}
           placeholder={
             searchTab === 'records'
-              ? 'Search records \u2014 e.g. \u201cfemale husband\u201d or \u201cLondon 1800\u201d'
-              : 'Search persons \u2014 e.g. \u201cMary Hamilton\u201d or \u201csailor\u201d'
+              ? 'Search records \u2014 e.g. \u201cbreeches\u201d or \u201cfemale husband\u201d'
+              : 'Search persons \u2014 e.g. \u201cBannister\u201d or \u201cactress\u201d'
           }
           className="flex-1 px-4 py-3 text-base rounded border border-border bg-paper text-ink"
           autoFocus
@@ -71,10 +72,8 @@ export default function HomeSearchBar() {
         </button>
       </div>
 
-      <p className="text-xs text-center mt-2 text-muted">
-        Use <code className="font-mono">&quot;quoted phrases&quot;</code>,{' '}
-        <code className="font-mono">OR</code>, and{' '}
-        <code className="font-mono">-exclusions</code>
+      <p className="text-xs text-center mt-2 text-muted flex items-center justify-center gap-1">
+        Search tips <SearchHelpTooltip />
       </p>
     </form>
   )

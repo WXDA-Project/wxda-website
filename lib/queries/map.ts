@@ -39,7 +39,7 @@ export async function getMapPins(
     .not(LOCATION_FIELD_KEY, 'is', null)
 
   if (params?.q?.trim())
-    docsQuery = docsQuery.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
+    docsQuery = docsQuery.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
   if (params?.date_from) docsQuery = docsQuery.gte(SORT_DATE_KEY, params.date_from)
   if (params?.date_to)   docsQuery = docsQuery.lte(SORT_DATE_KEY, params.date_to)
   for (const field of MULTISELECT_FILTER_FIELDS) {

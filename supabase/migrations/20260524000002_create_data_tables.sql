@@ -16,7 +16,7 @@ create table containers (
   short_name    text,
   short_summary text,
   fts           tsvector generated always as (
-    to_tsvector('english'::regconfig,
+    to_tsvector('simple'::regconfig,
       (coalesce(title, '') || ' ') || coalesce(short_summary, ''))
   ) stored
 );
@@ -50,7 +50,7 @@ create table persons (
   short_summary            text,
   social_rank              text,
   fts                      tsvector generated always as (
-    to_tsvector('english'::regconfig,
+    to_tsvector('simple'::regconfig,
       ((coalesce(title, '') || ' ') || coalesce(short_summary, '')) || coalesce(notes, ''))
   ) stored
 );
@@ -108,7 +108,7 @@ create table documents (
   topics                            text[],
   venue                             text[],
   fts                               tsvector generated always as (
-    to_tsvector('english'::regconfig,
+    to_tsvector('simple'::regconfig,
       (coalesce(title, '') || ' ') || coalesce(short_summary, ''))
   ) stored
 );
@@ -132,7 +132,7 @@ create table relationships (
   source_record_pointer text,
   target_record_pointer text,
   fts                   tsvector generated always as (
-    to_tsvector('english'::regconfig, coalesce(title, ''))
+    to_tsvector('simple'::regconfig, coalesce(title, ''))
   ) stored
 );
 

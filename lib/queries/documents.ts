@@ -44,7 +44,7 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     .eq(VISIBILITY_COLUMN, 'public')
 
   if (params.q?.trim()) {
-    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
+    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
   }
 
   if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
@@ -190,7 +190,7 @@ export async function searchDocumentDates(
     .eq(VISIBILITY_COLUMN, 'public')
 
   if (params.q?.trim()) {
-    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
+    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
   }
   if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
   if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)

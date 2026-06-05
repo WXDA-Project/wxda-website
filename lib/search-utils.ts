@@ -38,7 +38,7 @@ export function extractSearchTerms(q: string): string[] {
 
 export function highlightSnippet(text: string, terms: string[], windowSize = 200): string | null {
   if (!text || terms.length === 0) return null
-  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const escaped = terms.map((t) => `\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`)
   const pattern = new RegExp(`(${escaped.join('|')})`, 'gi')
   const first = pattern.exec(text)
   if (!first) return null

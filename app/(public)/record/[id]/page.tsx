@@ -421,7 +421,7 @@ function ContainerCard({
   const name = containerDisplayName(container, containerKeys, container.id)
   const shortName = container[containerKeys.CONTAINER_SHORT_NAME_KEY] as string | null
   return (
-    <div className="rounded p-3 text-sm bg-tag-bg border border-border">
+    <div className="text-sm">
       <p className="font-semibold text-ink">
         {name}
         {shortName && shortName !== name && (
@@ -435,17 +435,7 @@ function ContainerCard({
           {container[containerKeys.CONTAINER_SUMMARY_KEY] as string}
         </p>
       )}
-      {(container[containerKeys.CONTAINER_SOURCE_URL_KEY] as string | null) && (
-        <p className="mt-1">
-          <a
-            href={container[containerKeys.CONTAINER_SOURCE_URL_KEY] as string}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View in source database ↗
-          </a>
-        </p>
-      )}
+
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import type { FieldConfig } from '@/lib/config/db-config'
+import SearchHelpTooltip from './SearchHelpTooltip'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -323,9 +324,9 @@ export default function SearchFilters({
           <div className="border-b border-border pb-3">
             <label
               htmlFor="sidebar-q"
-              className="block text-sm font-semibold mb-1.5 text-ink"
+              className="flex items-center gap-1.5 text-sm font-semibold mb-1.5 text-ink"
             >
-              Keyword Search
+              Keyword Search <SearchHelpTooltip />
             </label>
             <input
               id="sidebar-q"
@@ -336,11 +337,6 @@ export default function SearchFilters({
               placeholder="Search all fields…"
               className="w-full px-3 py-2 text-sm rounded border border-border bg-paper text-ink"
             />
-            <p className="mt-1.5 text-xs text-muted">
-              Use <code className="font-mono">&quot;phrases&quot;</code>,{' '}
-              <code className="font-mono">OR</code>,{' '}
-              <code className="font-mono">-exclusions</code>
-            </p>
           </div>
         )}
 

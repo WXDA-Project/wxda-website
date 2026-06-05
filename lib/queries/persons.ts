@@ -39,7 +39,7 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
     .eq(VISIBILITY_COLUMN, 'public')
 
   if (params.q?.trim()) {
-    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'english' })
+    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
   }
 
   for (const field of PERSON_MULTISELECT_FILTER_FIELDS) {

@@ -31,11 +31,16 @@ function RecordResultsTable({
   records,
   tableFields,
   summaryKey,
+  titleKey,
+  searchTerms = [],
 }: {
   records: Record<string, unknown>[]
   tableFields: FieldConfig[]
   summaryKey?: string
+  titleKey?: string
+  searchTerms?: string[]
 }) {
+  const highlightKeys = new Set([summaryKey, titleKey].filter(Boolean) as string[])
   if (records.length === 0) {
     return (
       <p className="text-sm py-8 text-center text-muted">
@@ -67,12 +72,15 @@ function RecordResultsTable({
               {tableFields.map((f) => {
                 const raw = record[f.key]
                 const hideCls = f.hideOnTablet ? ' hidden lg:table-cell' : f.hideOnMobile ? ' hidden sm:table-cell' : ''
-                if (f.key === summaryKey && record._headline) {
-                  return (
-                    <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}`}>
-                      <span dangerouslySetInnerHTML={{ __html: record._headline as string }} />
-                    </td>
-                  )
+                if (highlightKeys.has(f.key) && searchTerms.length > 0) {
+                  const hl = highlightSnippet(formatValue(raw), searchTerms)
+                  if (hl) {
+                    return (
+                      <td key={f.key} className={`py-3 px-3 align-top text-ink${hideCls}`}>
+                        <span dangerouslySetInnerHTML={{ __html: hl }} />
+                      </td>
+                    )
+                  }
                 }
                 let display: string
                 if (f.format === 'date') {
@@ -107,11 +115,13 @@ function PersonResultsTable({
   personTableFields,
   personConfig,
   summaryKey,
+  searchTerms = [],
 }: {
   records: PersonRow[]
   personTableFields: FieldConfig[]
   personConfig: { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string }
   summaryKey?: string
+  searchTerms?: string[]
 }) {
   if (records.length === 0) {
     return (
@@ -150,12 +160,15 @@ function PersonResultsTable({
                 </td>
                 {personTableFields.map((f) => {
                   const raw = person[f.key as keyof PersonRow]
-                  if (f.key === summaryKey && person._headline) {
-                    return (
-                      <td key={f.key} className="py-3 px-3 align-top hidden sm:table-cell text-ink">
-                        <span dangerouslySetInnerHTML={{ __html: person._headline as string }} />
-                      </td>
-                    )
+                  if (f.key === summaryKey && searchTerms.length > 0) {
+                    const hl = highlightSnippet(formatValue(raw), searchTerms)
+                    if (hl) {
+                      return (
+                        <td key={f.key} className="py-3 px-3 align-top hidden sm:table-cell text-ink">
+                          <span dangerouslySetInnerHTML={{ __html: hl }} />
+                        </td>
+                      )
+                    }
                   }
                   const display = truncate(formatValue(raw), f.maxTableLength ?? 60)
                   return (
@@ -198,7 +211,7 @@ export default async function SearchPage({
   // ── Records search ─────────────────────────────────────────────────────────
   if (tab === 'records') {
     const [docConfig] = await Promise.all([getDocumentConfig()])
-    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD, DOC_SUMMARY_KEY } = docConfig
+    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD, DOC_SUMMARY_KEY, DOC_NAME_TITLE_KEY } = docConfig
 
     const date_from = (sp.date_from as string | undefined) ?? undefined
     const date_to = (sp.date_to as string | undefined) ?? undefined
@@ -227,15 +240,6 @@ export default async function SearchPage({
       : undefined
 
     const searchTerms = q?.trim() ? extractSearchTerms(q) : []
-    if (searchTerms.length > 0) {
-      for (const record of result.records) {
-        const summary = record[DOC_SUMMARY_KEY] as string | null
-        if (summary) {
-          const hl = highlightSnippet(summary, searchTerms)
-          if (hl) record._headline = hl
-        }
-      }
-    }
 
     const firstResult = (page - 1) * PAGE_SIZE + 1
     const lastResult = Math.min(page * PAGE_SIZE, result.total)
@@ -270,7 +274,7 @@ export default async function SearchPage({
               archiveDates={archiveDates}
               filteredDates={filteredDates}
             />
-            <RecordResultsTable records={result.records} tableFields={TABLE_FIELDS} summaryKey={DOC_SUMMARY_KEY} />
+            <RecordResultsTable records={result.records} tableFields={TABLE_FIELDS} summaryKey={DOC_SUMMARY_KEY} titleKey={DOC_NAME_TITLE_KEY} searchTerms={searchTerms} />
             <Suspense>
               <Pagination currentPage={result.page} totalPages={result.totalPages} />
             </Suspense>
@@ -302,15 +306,6 @@ export default async function SearchPage({
   ])
 
   const searchTerms = q?.trim() ? extractSearchTerms(q) : []
-  if (searchTerms.length > 0) {
-    for (const person of result.records) {
-      const summary = person[PERSON_SUMMARY_KEY] as string | null
-      if (summary) {
-        const hl = highlightSnippet(summary, searchTerms)
-        if (hl) person._headline = hl
-      }
-    }
-  }
   const firstResult = (page - 1) * PAGE_SIZE + 1
   const lastResult = Math.min(page * PAGE_SIZE, result.total)
 
@@ -344,6 +339,7 @@ export default async function SearchPage({
             personTableFields={PERSON_TABLE_FIELDS}
             personConfig={personConfig}
             summaryKey={PERSON_SUMMARY_KEY}
+            searchTerms={searchTerms}
           />
           <Suspense>
             <Pagination currentPage={result.page} totalPages={result.totalPages} />
