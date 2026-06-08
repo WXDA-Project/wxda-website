@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
@@ -53,11 +54,15 @@ async function BlogPostContent({
         </nav>
 
         {post.cover_image_url && (
-          <img
-            src={post.cover_image_url}
-            alt=""
-            className="w-full max-h-72 object-cover rounded mb-8 border border-border"
-          />
+          <div className="relative w-full h-72 rounded mb-8 border border-border overflow-hidden">
+            <Image
+              src={post.cover_image_url}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 768px"
+            />
+          </div>
         )}
 
         <header className="mb-10">

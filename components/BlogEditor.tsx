@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -52,6 +53,7 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [showPreview, setShowPreview] = useState(false)
+  const [previewContent, setPreviewContent] = useState(post?.content ?? '')
   const editorRef = useRef<MDXEditorMethods>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
   const committedCoverUrl = useRef(post?.cover_image_url ?? null)
@@ -60,16 +62,11 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
   const sessionUploadedImages = useRef<string[]>([])
 
   useEffect(() => {
-    if (!post) {
-      setTitle('')
-      setSlug('')
-      setSummary('')
-      setCoverImageUrl('')
-      setSlugManuallyEdited(false)
-      setError(null)
-      setTimeout(() => editorRef.current?.setMarkdown(''), 0)
+    if (showPreview) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
     }
-  }, [post])
+  }, [showPreview])
 
   function handleTitleChange(value: string) {
     setTitle(value)
@@ -146,7 +143,10 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setShowPreview(v => !v)}
+            onClick={() => {
+              if (!showPreview) setPreviewContent(editorRef.current?.getMarkdown() ?? post?.content ?? '')
+              setShowPreview(v => !v)
+            }}
             className="px-4 py-2 text-sm font-semibold border border-border rounded hover:bg-tag-bg transition-colors cursor-pointer"
           >
             {showPreview ? 'Edit' : 'Preview'}
@@ -177,9 +177,9 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
       )}
 
       {showPreview && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
-          <div className="max-w-3xl mx-auto my-6 px-4">
-            <div className="bg-paper border border-border rounded-lg px-6 py-10">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-6">
+          <div className="w-full max-w-3xl">
+            <div className="bg-paper border border-border rounded-lg px-6 py-10 max-h-[calc(100vh-3rem)] overflow-y-auto">
               <button
                 type="button"
                 onClick={() => setShowPreview(false)}
@@ -189,11 +189,15 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
               </button>
 
               {coverImageUrl && (
-                <img
-                  src={coverImageUrl}
-                  alt=""
-                  className="w-full max-h-72 object-cover rounded mb-8 border border-border"
-                />
+                <div className="relative w-full h-72 rounded mb-8 border border-border overflow-hidden">
+                  <Image
+                    src={coverImageUrl}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 768px"
+                  />
+                </div>
               )}
 
               <header className="mb-10">
@@ -210,7 +214,7 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
 
               <div className="blog-content">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                  {editorRef.current?.getMarkdown() ?? post?.content ?? ''}
+                  {previewContent}
                 </ReactMarkdown>
               </div>
             </div>
@@ -258,7 +262,7 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
           <label className="block text-sm font-semibold text-ink mb-1">Cover image</label>
           <div className="flex items-center gap-3">
             {coverImageUrl && (
-              <img src={coverImageUrl} alt="" className="h-12 w-20 object-cover rounded border border-border" />
+              <Image src={coverImageUrl} alt="" width={80} height={48} className="object-cover rounded border border-border" />
             )}
             <button
               type="button"

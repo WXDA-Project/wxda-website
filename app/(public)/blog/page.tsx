@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { getBlogPosts } from '@/lib/queries/blog'
@@ -54,11 +55,15 @@ async function BlogContent({
                   <Link href={`/blog/${post.slug}`} className="group block !no-underline">
                     <article className="border border-border rounded bg-paper overflow-hidden hover:border-ink transition-colors">
                       {post.cover_image_url && (
-                        <img
-                          src={post.cover_image_url}
-                          alt=""
-                          className="w-full h-48 object-cover"
-                        />
+                        <div className="relative w-full h-48">
+                          <Image
+                            src={post.cover_image_url}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 768px"
+                          />
+                        </div>
                       )}
                       <div className="p-6">
                         <time className="text-xs tracking-wide uppercase text-muted font-sans">
