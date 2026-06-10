@@ -20,7 +20,7 @@ function extractStoragePaths(content: string | null, coverUrl: string | null): s
     for (const m of content.matchAll(/src=["'](https?:\/\/[^"']+)["']/g)) urls.push(m[1])
   }
   return urls
-    .map((u) => { const i = u.indexOf(marker); return i !== -1 ? u.slice(i + marker.length) : null })
+    .map((u) => { const i = u.indexOf(marker); return i !== -1 ? u.slice(i + marker.length).split('?')[0] : null })
     .filter((p): p is string => p !== null)
 }
 
@@ -56,8 +56,11 @@ export async function savePost(data: SavePostInput): Promise<{ error?: string }>
     }
 
     if (data.id) {
+      const { data: existing } = await supabase
+        .from('blog_posts').select('slug').eq('id', data.id).maybeSingle()
       const { error } = await supabase.from('blog_posts').update(payload).eq('id', data.id)
       if (error) return { error: friendlyError(error.message) }
+      if (existing?.slug && existing.slug !== data.slug) updateTag(`blog-${existing.slug}`)
     } else {
       const { error } = await supabase.from('blog_posts').insert(payload)
       if (error) return { error: friendlyError(error.message) }

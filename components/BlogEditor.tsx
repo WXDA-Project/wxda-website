@@ -68,15 +68,17 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
     }
   }, [showPreview])
 
+  function deleteStorageImages(urls: string[]) {
+    const supabase = createClient()
+    const paths = urls
+      .map(u => { const i = u.indexOf(BLOG_IMAGES_MARKER); return i !== -1 ? u.slice(i + BLOG_IMAGES_MARKER.length).split('?')[0] : null })
+      .filter((p): p is string => p !== null)
+    if (paths.length > 0) supabase.storage.from('blog-images').remove(paths).catch(console.error)
+  }
+
   function handleTitleChange(value: string) {
     setTitle(value)
     if (!slugManuallyEdited) setSlug(slugify(value))
-  }
-
-  function deleteImageFromStorage(url: string) {
-    const i = url.indexOf(BLOG_IMAGES_MARKER)
-    if (i === -1) return
-    createClient().storage.from('blog-images').remove([url.slice(i + BLOG_IMAGES_MARKER.length)])
   }
 
   async function handleCoverImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -90,7 +92,7 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
     const { error: uploadError } = await supabase.storage.from('blog-images').upload(path, file)
     setUploadingCover(false)
     if (uploadError) { setError(uploadError.message); return }
-    if (pendingCoverUrl.current) deleteImageFromStorage(pendingCoverUrl.current)
+    if (pendingCoverUrl.current) deleteStorageImages([pendingCoverUrl.current])
     const newUrl = supabase.storage.from('blog-images').getPublicUrl(path).data.publicUrl
     pendingCoverUrl.current = newUrl
     setCoverImageUrl(newUrl)
@@ -113,18 +115,18 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
         published_at: publishedAt,
       })
       if (result.error) { setError(result.error); return }
+      const urlsToDelete: string[] = []
       if (committedCoverUrl.current && committedCoverUrl.current !== (coverImageUrl || null)) {
-        deleteImageFromStorage(committedCoverUrl.current)
+        urlsToDelete.push(committedCoverUrl.current)
       }
       if (pendingCoverUrl.current && pendingCoverUrl.current !== (coverImageUrl || null)) {
-        deleteImageFromStorage(pendingCoverUrl.current)
+        urlsToDelete.push(pendingCoverUrl.current)
       }
       committedCoverUrl.current = coverImageUrl || null
       const newContentImages = extractContentImageUrls(content)
       const allPriorImages = [...new Set([...committedContentImages.current, ...sessionUploadedImages.current])]
-      allPriorImages
-        .filter(url => !newContentImages.includes(url))
-        .forEach(url => deleteImageFromStorage(url))
+      allPriorImages.filter(url => !newContentImages.includes(url)).forEach(url => urlsToDelete.push(url))
+      if (urlsToDelete.length > 0) deleteStorageImages(urlsToDelete)
 
       router.push('/admin/blog')
       router.refresh()
@@ -275,7 +277,13 @@ export default function BlogEditor({ post }: { post?: BlogEditorPost }) {
             {coverImageUrl && (
               <button
                 type="button"
-                onClick={() => setCoverImageUrl('')}
+                onClick={() => {
+                  if (pendingCoverUrl.current === coverImageUrl) {
+                    deleteStorageImages([coverImageUrl])
+                    pendingCoverUrl.current = null
+                  }
+                  setCoverImageUrl('')
+                }}
                 className="text-sm !text-crimson hover:underline cursor-pointer !no-underline"
               >
                 Remove
