@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/AndyX07/wxda-website/actions/workflows/ci.yml/badge.svg)](https://github.com/AndyX07/wxda-website/actions/workflows/ci.yml)
 
-A digital archive and research tool for historical records related to women's cross-dressing in eighteenth and nineteenth-century Britain. The site provides full-text search, faceted filtering and an interactive map.
+A digital archive and research tool for historical records related to women's cross-dressing. The site provides full-text search, faceted filtering, an interactive map, and a blog.
 
 ## Tech Stack
 
@@ -139,17 +139,29 @@ wxda-website/
 │   │   │   ├── page.tsx        # About the project (mission, acknowledgements, coverage)
 │   │   │   └── overview/
 │   │   │       └── page.tsx    # Project overview, aims, and methodology
-│   │   └── advisory-board/
-│   │       └── page.tsx        # Scholarly advisory board profiles
+│   │   ├── advisory-board/
+│   │   │   └── page.tsx        # Scholarly advisory board profiles
+│   │   └── blog/
+│   │       ├── page.tsx        # Blog post list
+│   │       └── [slug]/
+│   │           └── page.tsx    # Individual blog post (ReactMarkdown + rehype-raw)
 │   ├── admin/                  # Admin area (separate minimal layout, no public nav)
 │   │   ├── layout.tsx          # Admin header (WXDA Admin label + sign out)
 │   │   ├── login/
 │   │   │   ├── page.tsx        # Email/password login form
 │   │   │   └── actions.ts      # signIn server action
-│   │   └── fields/
-│   │       ├── page.tsx        # Field config editor (4-tab CRUD table)
-│   │       ├── actions.ts      # saveField, addField, deleteField server actions
-│   │       └── FieldsClient.tsx # Client component — edit dialog + table
+│   │   ├── fields/
+│   │   │   ├── page.tsx        # Field config editor (4-tab CRUD table)
+│   │   │   ├── actions.ts      # saveField, addField, deleteField server actions
+│   │   │   └── FieldsClient.tsx # Client component — edit dialog + table
+│   │   └── blog/
+│   │       ├── page.tsx        # Blog post list with edit/delete actions
+│   │       ├── actions.ts      # savePost, deletePost server actions (cache invalidation + storage cleanup)
+│   │       ├── BlogPostActions.tsx # Client component — delete confirmation
+│   │       ├── new/
+│   │       │   └── page.tsx    # New post page
+│   │       └── [id]/edit/
+│   │           └── page.tsx    # Edit existing post page
 │   └── api/
 │       ├── auth/signout/
 │       │   └── route.ts        # POST → signs out + redirects to /admin/login
@@ -164,7 +176,9 @@ wxda-website/
 │   ├── TabNav.tsx               # Records / Persons tab switcher
 │   ├── TimelineChart.tsx        # SVG timeline chart on search results
 │   ├── DocumentMap.tsx          # Leaflet map with clustering + heatmap
-│   └── DownloadPdfButton.tsx    # Client-side PDF export for record detail pages
+│   ├── DownloadPdfButton.tsx    # Client-side PDF export for record detail pages
+│   ├── BlogEditor.tsx           # Blog post editor (form fields + MDXEditor, preview modal)
+│   └── MDXEditorClient.tsx      # Client-only MDXEditor wrapper with Supabase image upload
 ├── lib/
 │   ├── supabase.ts              # Server-only public data client (anon key, no auth)
 │   ├── auth.ts                  # Server auth helpers
@@ -181,7 +195,8 @@ wxda-website/
 │       ├── documents.ts        # Document search, fetch, enrichment, timeline
 │       ├── persons.ts          # Person search, fetch, person-document links
 │       ├── map.ts              # Map pin query
-│       └── filters.ts          # Cached filter option generation
+│       ├── filters.ts          # Cached filter option generation
+│       └── blog.ts             # Blog post queries (getBlogPosts, getBlogPost)
 ├── tests/
 │   ├── unit/
 │   │   ├── display-helpers.test.ts  # Jest unit tests for display helper functions
@@ -231,6 +246,9 @@ containers
 geocode_cache
    └─ latitude/longitude for location strings extracted from documents
 
+blog_posts
+   └─ id, slug, title, summary, cover_image_url, content (markdown), published_at, updated_at
+
 document_field_config    ┐
 person_field_config      │ Field config — 4 tables managed by the admin UI.
 container_field_config   │ Read at runtime by lib/config/db-config.ts.
@@ -251,7 +269,3 @@ All field configuration (column names, labels, filter types, display flags, role
 | `relationship_field_config` | `relationships` | Relationships |
 
 **To change any field** — log in at `/admin/login` and edit through the admin UI. No code changes or redeployment needed. See [docs/admin-guide.md](docs/admin-guide.md) for a full reference.
-
-## Design Tokens
-
-All colours, spacing, and typographic decisions are expressed as CSS custom properties in `app/globals.css` under a `@theme inline` block. Tailwind utilities and inline styles in SVG/Leaflet HTML both reference the same tokens via `var(--color-*)`. To restyle the site, update the token values there — no component changes needed.

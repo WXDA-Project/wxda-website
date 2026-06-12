@@ -2,7 +2,50 @@
 
 ## Overview
 
-The admin panel lives at `/admin`. It lets you control which database columns are fetched, displayed, and filtered across the entire public site — without code changes or redeployment. Changes propagate within seconds.
+The admin panel lives at `/admin`. It has two sections:
+
+- **Fields** (`/admin/fields`) — controls which database columns are fetched, displayed, and filtered across the public site. Changes propagate within seconds without redeployment.
+- **Blog** (`/admin/blog`) — create, edit, and publish blog posts with a visual editor.
+
+---
+
+---
+
+## Blog
+
+### Managing Posts
+
+Navigate to `/admin/blog` to see all posts. Each row shows the title, status (Draft or Published), and date.
+
+- **New Post** — click the button in the top-right corner
+- **Edit** — click Edit on any row
+- **Delete** — click Delete on any row and confirm the prompt. The post and all its images are permanently deleted from storage.
+
+### The Editor
+
+The editor has a visual toolbar (headings, bold/italic, lists, links, images, etc.) and outputs standard Markdown. Below the toolbar are the following fields:
+
+| Field | Notes |
+|---|---|
+| **Title** | Required. |
+| **Slug** | Auto-generated from the title. Edit manually to customise the URL (`/blog/your-slug`). Slugs must be unique — a warning appears if there is a conflict. |
+| **Summary** | Short description shown on the blog list page. |
+| **Cover image** | Uploaded directly to storage. Shown at the top of the post and as a thumbnail on the list page. Click **Change** to replace or **Remove** to clear. |
+| **Content** | The main body. Use the toolbar or Markdown shortcuts. |
+
+### Images in Content
+
+Click the image icon in the toolbar to insert an image. Images upload directly to storage and are embedded in the content. If you delete an image from the editor and save, it is removed from storage automatically.
+
+### Preview
+
+Click **Preview** to see how the post will look on the public blog. The preview reflects the current editor content including unsaved changes. Click **Edit** to return to editing.
+
+### Publishing
+
+- **Save Draft** — saves without making the post publicly visible.
+- **Publish** — saves and sets the publication date, making the post visible at `/blog/[slug]`.
+- **Save & Keep Published** — saves changes to an already-published post without changing its publication date.
 
 ---
 
@@ -179,11 +222,3 @@ When you save or delete a field, the server:
 1. Writes the change to Supabase.
 2. Calls `updateTag('field-config')` to invalidate the Next.js config cache.
 3. Calls `revalidatePath('/', 'layout')` to revalidate the full layout tree.
-
-The public site reflects the new configuration within a few seconds. No deployment is required.
-
----
-
-## Access Control
-
-All four config tables have public read access (the public site fetches field config without authentication) and authenticated write access (any signed-in user can add, edit, or delete rows). There is no role-based granularity beyond authenticated vs. anonymous — anyone with valid credentials has full write access.

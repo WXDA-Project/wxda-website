@@ -1,10 +1,18 @@
+import Link from 'next/link'
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="bg-ink text-paper px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shrink-0">
-        <span className="text-sm font-semibold tracking-wide font-serif">
-          WXDA Admin
-        </span>
+        <nav className="flex items-center gap-5">
+          <span className="text-sm font-semibold tracking-wide font-serif">WXDA Admin</span>
+          <Link href="/admin/fields" className="text-xs opacity-70 hover:opacity-100 transition-opacity text-paper no-underline">
+            Fields
+          </Link>
+          <Link href="/admin/blog" className="text-xs opacity-70 hover:opacity-100 transition-opacity text-paper no-underline">
+            Blog
+          </Link>
+        </nav>
         <form action="/api/auth/signout" method="POST">
           <button
             type="submit"
