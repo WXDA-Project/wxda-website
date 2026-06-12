@@ -8,14 +8,15 @@ type NavLink = { href?: string; label: string; children?: NavChild[] }
 
 const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Home' },
-  { href: '/search', label: 'Search Records' },
+  { href: '/search', label: 'Search' },
   { href: '/map', label: 'Map' },
   { href: '/advisory-board', label: 'Advisory Board' },
   {
     label: 'About',
     children: [
       { href: '/about', label: 'About the Project' },
-      { href: '/about/overview', label: 'Overview' },
+      { href: '/about/history', label: 'History' },
+      { href: '/about/news', label: 'News' },
     ],
   },
 ]

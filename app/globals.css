@@ -76,13 +76,16 @@ body {
 
 /* ── Links ──────────────────────────────────────────────────────────────── */
 
-a {
-  color: var(--color-crimson);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-a:hover {
-  color: var(--color-crimson-hover);
+@layer base {
+  a {
+    color: var(--color-crimson);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  a:hover {
+    color: var(--color-crimson-hover);
+  }
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */

@@ -68,7 +68,7 @@ export default function AdvisoryBoardPage() {
                   href={advisor.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-crimson transition-colors"
+                  className="no-underline hover:text-crimson transition-colors"
                 >
                   {advisor.name}
                 </Link>

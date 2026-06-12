@@ -15,8 +15,6 @@ const TABS: { key: AdminTable; label: string }[] = [
   { key: 'relationship_field_config',  label: 'Relationships' },
 ]
 
-// ── Outer shell — synchronous, renders immediately ─────────────────────────
-
 export default function AdminFieldsPage({
   searchParams,
 }: {
@@ -28,8 +26,6 @@ export default function AdminFieldsPage({
     </Suspense>
   )
 }
-
-// ── Loading skeleton ───────────────────────────────────────────────────────
 
 function PageSkeleton() {
   return (
@@ -46,8 +42,6 @@ function PageSkeleton() {
     </div>
   )
 }
-
-// ── Inner async component — all dynamic data fetching happens here ─────────
 
 async function AdminFieldsContent({
   searchParams,
@@ -90,7 +84,6 @@ async function AdminFieldsContent({
         </div>
       </div>
 
-      {/* General help */}
       <details className="mb-6 rounded border border-border bg-paper group">
         <summary className="px-4 py-3 text-sm font-semibold cursor-pointer select-none text-ink list-none flex items-center justify-between">
           <span>ⓘ How this works</span>
@@ -121,8 +114,7 @@ async function AdminFieldsContent({
           </p>
         </div>
       </details>
-
-      {/* Tab bar */}
+      
       <nav aria-label="Config tabs" className="flex gap-1 mb-6 border-b border-border">
         {TABS.map((tab) => {
           const isActive = tab.key === activeTab

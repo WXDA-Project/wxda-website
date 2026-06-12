@@ -19,7 +19,7 @@ export interface FieldConfig {
   isArray?: boolean
   hideOnMobile?: boolean
   hideOnTablet?: boolean
-  format?: 'date' | null
+  format?: 'date' | 'image' | null
   maxTableLength?: number | null
   sortOrder: number
 }
@@ -84,7 +84,7 @@ function toFieldConfig(row: DocumentFieldRow | PersonFieldRow): FieldConfig {
     isArray: row.is_array,
     hideOnMobile: row.hide_on_mobile,
     hideOnTablet: row.hide_on_tablet,
-    format: row.format as 'date' | null,
+    format: row.format as 'date' | 'image' | null,
     maxTableLength: row.max_table_length,
     sortOrder: row.sort_order,
   }

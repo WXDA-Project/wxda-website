@@ -55,7 +55,7 @@ function SidebarContent({ pin, onClose }: { pin: MapPin; onClose: () => void }) 
                 {doc.summary}
               </p>
             )}
-            <Link href={`/record/${doc.id}`} className="text-xs font-semibold">
+            <Link href={`/record/${doc.id}`} className="text-xs font-semibold no-underline">
               View record →
             </Link>
           </li>
@@ -96,10 +96,11 @@ export default function DocumentMap({ pins, focus }: { pins: MapPin[]; focus?: s
 
       const map = L.map(containerRef.current, { center: [20, 0], zoom: 2 })
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution:
-          '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18,
+          '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19,
+        subdomains: 'abcd',
       }).addTo(map)
 
       // Clicking the map background closes the sidebar.

@@ -3,6 +3,7 @@
 export interface PdfRow {
   label: string  // empty string → full-width value, no label column
   value: string
+  isUrl?: boolean
 }
 
 export interface PdfSection {
@@ -78,6 +79,7 @@ export default function DownloadPdfButton({ pdf }: { pdf: PdfDoc }) {
     for (const section of pdf.sections) {
       if (section.rows.length === 0) continue
 
+
       guard(14)
 
       // Section heading
@@ -93,7 +95,22 @@ export default function DownloadPdfButton({ pdf }: { pdf: PdfDoc }) {
       for (const row of section.rows) {
         const fullWidth = row.label === ''
 
-        if (fullWidth) {
+        if (row.isUrl) {
+          const x = fullWidth ? mL : valueX
+          const display = row.value.length > 75 ? row.value.slice(0, 72) + '...' : row.value
+          guard(lineH + 2)
+          doc.setFontSize(8.5)
+          if (!fullWidth) {
+            const labelLines = doc.splitTextToSize(row.label, labelW - 2) as string[]
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(90)
+            doc.text(labelLines, mL, y)
+          }
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(29, 95, 158)
+          doc.textWithLink(display, x, y, { url: row.value })
+          y += lineH + 2
+        } else if (fullWidth) {
           const lines = doc.splitTextToSize(row.value, usableW) as string[]
           const rowH = lines.length * lineH
           guard(rowH + 2)

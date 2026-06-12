@@ -55,6 +55,7 @@ export default async function MapPage({
       </p>
 
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        
         {/* Filter sidebar */}
         <div className="w-full lg:w-64 shrink-0">
           <Suspense>

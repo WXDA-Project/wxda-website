@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Overview — Waterloo Cross-Dressing Archive',
+  title: 'History — Waterloo Cross-Dressing Archive',
   description:
     'An overview of the Waterloo Cross-Dressing Archive project, its aims, scope, and development methodology.',
 }
 
-export default function OverviewPage() {
+export default function HistoryPage() {
   return (
     <div className="bg-parchment min-h-full">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
@@ -16,7 +16,7 @@ export default function OverviewPage() {
             Waterloo Cross-Dressing Archive &middot; University of Waterloo
           </p>
           <h1 className="font-serif text-4xl sm:text-5xl font-bold text-ink leading-tight">
-            Overview
+            History of the WXDA
           </h1>
           <div className="mt-5 border-t-2 border-ink" />
         </header>

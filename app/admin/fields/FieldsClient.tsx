@@ -64,8 +64,8 @@ const BASE_DOC_COLS: ColDef[] = [
     help: 'Hide this column from the search table on screens narrower than 1024 px (tablets and small laptops).',
   },
   {
-    key: 'format', label: 'Format', type: 'select', options: ['', 'date'],
-    help: 'How to display the raw value. "date" converts a stored date string to a readable format like "3 Jun 1820". Leave blank to show the value as-is.',
+    key: 'format', label: 'Format', type: 'select', options: ['', 'date', 'image'],
+    help: 'How to display the raw value. "date" converts a stored date string to a readable format like "3 Jun 1820". "image" renders values as images. Leave blank to show the value as-is.',
   },
   {
     key: 'max_table_length', label: 'Max Table Length', type: 'number',
@@ -120,8 +120,8 @@ const PERSON_COLS: ColDef[] = [
     help: 'Hide this column from the search table on screens narrower than 1024 px (tablets and small laptops).',
   },
   {
-    key: 'format', label: 'Format', type: 'select', options: ['', 'date'],
-    help: 'How to display the raw value. "date" converts a stored date string to a readable format like "3 Jun 1820". Leave blank to show the value as-is.',
+    key: 'format', label: 'Format', type: 'select', options: ['', 'date', 'image'],
+    help: 'How to display the raw value. "date" converts a stored date string to a readable format like "3 Jun 1820". "image" renders values as images. Leave blank to show the value as-is.',
   },
   {
     key: 'max_table_length', label: 'Max Table Length', type: 'number',

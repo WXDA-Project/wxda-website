@@ -96,7 +96,7 @@ function RecordResultsTable({
                 )
               })}
               <td className="py-3 px-3 align-top w-[1%] whitespace-nowrap">
-                <Link href={`/record/${record.id}`} className="text-xs font-semibold underline text-crimson">
+                <Link href={`/record/${record.id}`} className="text-xs font-semibold no-underline text-crimson">
                   View<span className="sr-only"> record for {String(record.title ?? `#${record.id}`)}</span>
                 </Link>
               </td>
@@ -178,7 +178,7 @@ function PersonResultsTable({
                   )
                 })}
                 <td className="py-3 px-3 align-top w-[1%] whitespace-nowrap">
-                  <Link href={`/person/${person.id}`} className="text-xs font-semibold underline text-crimson">
+                  <Link href={`/person/${person.id}`} className="text-xs font-semibold no-underline text-crimson">
                     View<span className="sr-only"> person: {name}</span>
                   </Link>
                 </td>

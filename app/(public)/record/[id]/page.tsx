@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import {
   getDocument,
   getDocumentEnrichment,
@@ -13,8 +15,7 @@ import {
 } from '@/lib/queries'
 import { getDocumentConfig, getPersonConfig, getContainerConfig } from '@/lib/config/db-config'
 import DownloadPdfButton, { type PdfDoc, type PdfSection } from '@/components/DownloadPdfButton'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
+import CitationBox from '@/components/CitationBox'
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—'
@@ -23,14 +24,21 @@ function formatDate(dateStr: string | null): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+const MLA_MONTHS = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'June', 'July', 'Aug.', 'Sept.', 'Oct.', 'Nov.', 'Dec.']
+
+function formatDateMLA(dateStr: string | null): string | null {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return null
+  return `${d.getUTCDate()} ${MLA_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+}
+
 function formatValue(value: unknown): string | null {
   if (value === null || value === undefined) return null
   if (Array.isArray(value)) return value.length > 0 ? value.join('; ') : null
   const str = String(value).trim()
   return str || null
 }
-
-// ── Shared sub-components ──────────────────────────────────────────────────
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -76,8 +84,6 @@ function PersonChip({
   )
 }
 
-// ── Metadata ───────────────────────────────────────────────────────────────
-
 export async function generateMetadata({
   params,
 }: {
@@ -94,8 +100,6 @@ export async function generateMetadata({
   }
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
-
 export default async function RecordDetailPage({
   params,
 }: {
@@ -108,7 +112,7 @@ export default async function RecordDetailPage({
     record,
     {
       DETAIL_FIELDS,
-      AUTHOR_FIELD_KEY, CONTAINER_FIELD_KEY, CITE_AS_KEY, SOURCE_URL_KEY,
+      AUTHOR_FIELD_KEY, CONTAINER_FIELD_KEY, SOURCE_URL_KEY,
       SORT_DATE_KEY, DOC_TITLE_KEY, DOC_NAME_TITLE_KEY, DOC_SUMMARY_KEY,
       LOCATION_FIELD_KEY,
     },
@@ -121,12 +125,14 @@ export default async function RecordDetailPage({
       CONTAINER_SUMMARY_KEY, CONTAINER_SOURCE_URL_KEY,
     },
     geocodedLocations,
+    headersList,
   ] = await Promise.all([
     getDocument(numId),
     getDocumentConfig(),
     getPersonConfig(),
     getContainerConfig(),
     getGeocodedLocations(),
+    headers(),
   ])
 
   if (!record) notFound()
@@ -150,7 +156,33 @@ export default async function RecordDetailPage({
 
   const title = documentDisplayTitle(rec, docKeys, id)
 
-  // ── Build PDF document ────────────────────────────────────────────────────
+  // ── MLA citation ────────────────────────────────────────────────────────────
+  const baseUrl = `${headersList.get('x-forwarded-proto') ?? 'https'}://${headersList.get('host')}`
+  const recordUrl = `${baseUrl}/record/${id}`
+  const now = new Date()
+  const accessedDate = `${now.getDate()} ${MLA_MONTHS[now.getMonth()]} ${now.getFullYear()}`
+  const authorNames = enrichment.authors.map((p) => personDisplayName(p, personKeys))
+  const citationPubName = enrichment.container
+    ? containerDisplayName(enrichment.container, containerKeys, enrichment.container.id)
+    : null
+  const citationDateStr = formatDateMLA(rec[SORT_DATE_KEY] as string | null)
+
+  const citationAuthorStr =
+    authorNames.length === 1 ? `${authorNames[0]}.` :
+    authorNames.length === 2 ? `${authorNames[0]}, and ${authorNames[1]}.` :
+    authorNames.length > 2 ? `${authorNames[0]}, et al.` :
+    null
+  const citationMid: string[] = []
+  if (citationPubName) citationMid.push(citationPubName)
+  if (citationDateStr) citationMid.push(citationDateStr)
+  const titlePunct = /[.?!]$/.test(title) ? `"${title}"` : `"${title}."`
+  const citationTextParts: string[] = []
+  if (citationAuthorStr) citationTextParts.push(citationAuthorStr)
+  citationTextParts.push(titlePunct)
+  if (citationMid.length > 0) citationTextParts.push(citationMid.join(', ') + '.')
+  citationTextParts.push(`Waterloo Cross-Dressing Archive, ${recordUrl}. Accessed ${accessedDate}.`)
+  const citationText = citationTextParts.join(' ')
+
   const pdfSections: PdfSection[] = []
 
   if (rec[DOC_SUMMARY_KEY])
@@ -166,7 +198,6 @@ export default async function RecordDetailPage({
     const cShortName = c[CONTAINER_SHORT_NAME_KEY] as string | null
     if (cShortName && cShortName !== cName) cRows.push({ label: 'Short name', value: cShortName })
     if (c[CONTAINER_SUMMARY_KEY]) cRows.push({ label: 'Description', value: c[CONTAINER_SUMMARY_KEY] as string })
-    if (c[CONTAINER_SOURCE_URL_KEY]) cRows.push({ label: 'Source URL', value: c[CONTAINER_SOURCE_URL_KEY] as string })
     pdfSections.push({ heading: 'Publication', rows: cRows })
   }
 
@@ -177,13 +208,17 @@ export default async function RecordDetailPage({
     })
 
   const detailRows = DETAIL_FIELDS
-    .map((field) => {
+    .flatMap((field) => {
+      if (field.format === 'image') {
+        const raw = rec[field.key] as string[] | string | null
+        const urls = Array.isArray(raw) ? raw : raw ? [raw] : []
+        return urls.map((url, i) => ({ label: i === 0 ? field.label : '', value: url, isUrl: true as const }))
+      }
       const v = field.format === 'date'
         ? formatDate(record[field.key] as string | null)
         : formatValue(record[field.key])
-      return v ? { label: field.label, value: v } : null
+      return v ? [{ label: field.label, value: v }] : []
     })
-    .filter((r): r is { label: string; value: string } => r !== null)
   if (detailRows.length > 0) pdfSections.push({ heading: 'Record Details', rows: detailRows })
 
   if (enrichment.mentionedPersons.length > 0)
@@ -195,10 +230,9 @@ export default async function RecordDetailPage({
       })),
     })
 
-  const citeRows: PdfSection['rows'] = []
-  if (rec[CITE_AS_KEY]) citeRows.push({ label: 'Cite as', value: rec[CITE_AS_KEY] as string })
-  if (rec[SOURCE_URL_KEY]) citeRows.push({ label: 'Source URL', value: rec[SOURCE_URL_KEY] as string })
-  if (citeRows.length > 0) pdfSections.push({ heading: 'Citation', rows: citeRows })
+  const citeRows: PdfSection['rows'] = [{ label: 'Cite as', value: citationText }]
+  if (rec[SOURCE_URL_KEY]) citeRows.push({ label: 'Source URL', value: rec[SOURCE_URL_KEY] as string, isUrl: true })
+  pdfSections.push({ heading: 'Citation', rows: citeRows })
 
   const pdfDoc: PdfDoc = {
     title: `Record #${id} — ${String(title)}`,
@@ -212,9 +246,9 @@ export default async function RecordDetailPage({
       <div className="flex items-center justify-between gap-4 mb-5">
         <nav aria-label="Breadcrumb" className="text-sm text-muted">
           <ol className="flex gap-2 list-none p-0 m-0 flex-wrap">
-            <li><Link href="/">Home</Link></li>
+            <li><Link href="/" className="no-underline">Home</Link></li>
             <li aria-hidden="true">/</li>
-            <li><Link href="/search">Search Records</Link></li>
+            <li><Link href="/search" className="no-underline">Search Records</Link></li>
             <li aria-hidden="true">/</li>
             <li aria-current="page">Record #{id}</li>
           </ol>
@@ -293,12 +327,45 @@ export default async function RecordDetailPage({
           </>
         )}
 
+        {/* ── Image fields (one section per field) ────────────────────────── */}
+        {DETAIL_FIELDS.filter((f) => f.format === 'image').map((field) => {
+          const raw = record[field.key] as string[] | string | null
+          const images = Array.isArray(raw) ? raw : raw ? [raw] : []
+          if (images.length === 0) return null
+          return (
+            <div key={field.key}>
+              <section aria-label={field.label}>
+                <SectionHeading>{field.label}</SectionHeading>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {images.map((src, i) => (
+                    <a
+                      key={src}
+                      href={src}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block no-underline"
+                      aria-label={`View ${field.label.toLowerCase()}${images.length > 1 ? ` ${i + 1} of ${images.length}` : ''} (opens in new tab)`}
+                    >
+                      <div className="relative aspect-[4/3] rounded border border-border overflow-hidden bg-tag-bg">
+                        <Image src={src} alt="" fill unoptimized className="object-contain" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+              <Divider />
+            </div>
+          )
+        })}
+
         {/* ── All other structured fields ──────────────────────────────────── */}
         <section aria-label="Record details">
           <SectionHeading>Full Record</SectionHeading>
           <dl className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-x-6 gap-y-3">
             {DETAIL_FIELDS.map((field) => {
-              // Location field: render each value with an optional map link
+              // Skip image fields
+              if (field.format === 'image') return null
+
               if (field.key === LOCATION_FIELD_KEY) {
                 const locs = (record[field.key] as string[] | null) ?? []
                 if (locs.length === 0) return null
@@ -375,33 +442,36 @@ export default async function RecordDetailPage({
           </>
         )}
 
-        {/* ── Cite-as / source URL ─────────────────────────────────────────── */}
-        {(rec[CITE_AS_KEY] || rec[SOURCE_URL_KEY]) && (
-          <>
-            <Divider />
-            <footer className="text-sm text-muted">
-              {rec[CITE_AS_KEY] && (
-                <p><span className="font-semibold">Cite as: </span>{rec[CITE_AS_KEY] as string}</p>
-              )}
-              {rec[SOURCE_URL_KEY] && (
-                <p className="mt-1">
-                  <span className="font-semibold">Source URL: </span>
-                  <a
-                    href={rec[SOURCE_URL_KEY] as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {rec[SOURCE_URL_KEY] as string}
-                  </a>
-                </p>
-              )}
-            </footer>
-          </>
-        )}
+        {/* ── Citation ─────────────────────────────────────────────────────── */}
+        <Divider />
+        <footer className="text-sm text-muted">
+          <p className="font-semibold mb-2">Cite as (MLA 9)</p>
+          <CitationBox
+            authorNames={authorNames}
+            title={title}
+            publicationName={citationPubName}
+            dateStr={citationDateStr}
+            recordUrl={recordUrl}
+            accessedDate={accessedDate}
+            citationText={citationText}
+          />
+          {rec[SOURCE_URL_KEY] && (
+            <p className="mt-3">
+              <span className="font-semibold">Source URL: </span>
+              <a
+                href={rec[SOURCE_URL_KEY] as string}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {rec[SOURCE_URL_KEY] as string}
+              </a>
+            </p>
+          )}
+        </footer>
       </article>
 
       <div className="mt-5">
-        <Link href="/search" className="text-sm">
+        <Link href="/search" className="text-sm no-underline">
           ← Back to search results
         </Link>
       </div>

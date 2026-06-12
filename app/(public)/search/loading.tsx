@@ -6,7 +6,6 @@ export default function SearchLoading() {
         style={{ backgroundColor: 'var(--color-border)', animation: 'pulse 1.5s ease-in-out infinite' }}
       />
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar skeleton */}
         <div
           className="w-full lg:w-64 shrink-0 rounded"
           style={{
@@ -15,7 +14,6 @@ export default function SearchLoading() {
             animation: 'pulse 1.5s ease-in-out infinite',
           }}
         />
-        {/* Results skeleton */}
         <div className="flex-1 space-y-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div

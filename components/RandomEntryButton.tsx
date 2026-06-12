@@ -31,7 +31,7 @@ export default function RandomEntryButton() {
       disabled={loading}
       className="bg-transparent border-0 p-0 text-crimson underline underline-offset-[2px] cursor-pointer hover:text-crimson-hover disabled:opacity-50 disabled:cursor-wait"
     >
-      {loading ? 'Loading…' : 'random entry'}
+      {loading ? 'Loading…' : 'view random entry'}
     </button>
   )
 }
