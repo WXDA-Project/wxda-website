@@ -56,7 +56,7 @@ export default function HomeSearchBar() {
           onChange={(e) => setQ(e.target.value)}
           placeholder={
             searchTab === 'records'
-              ? 'Search records \u2014 e.g. \u201cbreeches\u201d or \u201cfemale husband\u201d'
+              ? 'Search records \u2014 e.g. \u201cbreeches\u201d or \u201ca gentleman\u201d'
               : 'Search persons \u2014 e.g. \u201cBannister\u201d or \u201cactress\u201d'
           }
           className="flex-1 px-4 py-3 text-base rounded border border-border bg-paper text-ink"
