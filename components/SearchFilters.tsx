@@ -424,7 +424,7 @@ export default function SearchFilters({
               : 'border-border bg-paper text-ink'
           }`}
         >
-          <span>⚙ Filters</span>
+          <span>Filters</span>
           {activeCount > 0 && (
             <span className="text-xs font-bold rounded-full px-1.5 py-0.5 leading-none bg-on-accent-faint">
               {activeCount} active
