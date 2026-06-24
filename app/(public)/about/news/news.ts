@@ -1,4 +1,5 @@
 export const NEWS: { date: string; text: string }[] = [
+  { date: '24 June 2026', text: 'Beta version of the new WXDA website launched' },
   { date: '22 October 2025', text: 'Work on revised fields and values continues' },
   { date: '14 January 2025', text: 'Implementation of revised fields and values is ongoing' },
   { date: '20 August 2024', text: 'Edits to improve inclusivity of the WXDA database’s fields and values have been completed' },

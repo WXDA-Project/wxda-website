@@ -28,9 +28,7 @@ export default function HistoryPage() {
               The Waterloo Cross-Dressing Archive is part of an ongoing research
               project on cross-dressing in eighteenth- and nineteenth-century
               literature and society initiated and directed by Professor Fraser
-              Easton at the University of Waterloo. The WXDA currently contains
-              records from the Times for the years 1785&#x2013;87, 1801&#x2013;02,
-              1833, and 1848. The WXDA aims to:
+              Easton at the University of Waterloo. The WXDA aims to:
             </p>
 
             <ol className="mt-6 space-y-4 list-decimal list-outside pl-6 font-serif text-base leading-relaxed text-muted">

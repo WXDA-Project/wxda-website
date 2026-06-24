@@ -19,7 +19,7 @@ export default function HomePage() {
           </h1>
           <p className="text-base sm:text-lg text-muted max-w-[38rem]">
             A scholarly archive of historical documents relating to cross-dressing and gender
-            non-conformity in the English-language press, 1785&#x2013;1848.
+            non-conformity in the English-language press, 1785&#x2013;1884.
           </p>
           <div className="w-full max-w-xl">
             <HomeSearchBar />
@@ -66,27 +66,15 @@ export default function HomePage() {
                 this cross-dressing instrumental (to work as a man), sexual (to pursue other
                 women), transgender (to be a man)?{' '}
                 <Link href="/record/563">
-                  Take a look at the WXDA records
+                  Take a look at the WXDA record
                 </Link>{' '}
-                and the{' '}
-                <a
-                  href="https://go.gale.com/ps/i.do?p=TTDA&u=uniwater&id=GALE|CS33817173&v=2.1&it=r&sid=TTDA&asid=b4577f62"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  original newspaper report
-                </a>{' '}
                 to explore this matter for yourself.
               </p>
               <p>
-                Follow the WXDA on{' '}
-                <a
-                  href="https://twitter.com/WXDAproject"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Twitter
-                </a>{' '}
+                Visit our{' '}
+                <Link href="/about/news">
+                  news page
+                </Link>{' '}
                 for updates and additional information.
               </p>
               <p className="font-semibold text-ink">Happy searching!</p>

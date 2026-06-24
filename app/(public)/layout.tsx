@@ -30,7 +30,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm opacity-80">
           <p>
             Waterloo Cross-Dressing Archive (WXDA) — University of Waterloo.
-            Historical records relating to cross-dressing and gender non-conformity, 1785–1848.
+            Historical records relating to cross-dressing and gender non-conformity, 1785–1884
+          </p>
+          <p className="mt-2">
+            &copy; 2026 University of Waterloo
           </p>
         </div>
       </footer>

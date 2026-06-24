@@ -75,35 +75,25 @@ export default function AboutPage() {
               <p>
                 Location of cross-dressing records in the Times was made
                 possible in part by research assistance from Y-Dang Troeung,
-                Christine Barbara Frim, Karl Ponthieux Stern, and Cheuk Huen
-                Lee (李卓萱). The late Dr. Troeung also helped develop the
+                Christine Barbara Frim, Karl Ponthieux Stern, Cheuk Huen
+                Lee (李卓萱), Jo-Ann Bonnett, and Andy Xu. The late Dr. Troeung also helped develop the
                 search set used in the identification of records in the Times
                 digital database. The Waterloo_Cross_Dressing_Archive database
                 content (to which this website gives access), including
                 summaries, analytic categories (fields), and record metatags
                 (values), was created with research assistance from Isabelle
-                Joyce Weigel-Mohamed and Mr. Ponthieux Stern. Mr. Ponthieux
-                Stern also helped design and launch the{' '}
-                <a
-                  href="https://twitter.com/WXDAproject"
-                  className="text-crimson underline hover:text-crimson-hover"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  WXDA Twitter account
-                </a>
-                .
+                Joyce Weigel-Mohamed and Mr. Ponthieux Stern.
                 Professor Ian Johnson provided database layout support, and
                 Professor Simon Burrows provided database advice.
               </p>
               <p>
-                For help with the website, Prof. Easton wishes to thank Camie
-                Kim and Isabelle Joyce Weigel-Mohamed.
+                For help with the website, Professor Easton wishes to thank Andy
+                Xu, Camie Kim, and Isabelle Joyce Weigel-Mohamed.
               </p>
               <p>
                 Some of the research for this project was made possible by a
-                UW/SSHRC Explore Grant and by the MITACS Globalink Internship
-                program.
+                SSHRC Insight Grant, a UW/SSHRC Explore Grant, and by the
+                MITACS Globalink Internship program.
               </p>
             </div>
           </section>
@@ -118,13 +108,9 @@ export default function AboutPage() {
               permit.
             </p>
             <dl className="mt-6 text-sm font-sans border-t border-border pt-5 space-y-2">
-              <div className="flex gap-3">
-                <dt className="font-semibold text-ink w-28 shrink-0">Years covered</dt>
-                <dd className="text-muted">1785&#x2013;87, 1801&#x2013;02, 1833, 1848</dd>
-              </div>
-              <div className="flex gap-3">
+<div className="flex gap-3">
                 <dt className="font-semibold text-ink w-28 shrink-0">Version</dt>
-                <dd className="text-muted">27 March 2022</dd>
+                <dd className="text-muted">24 June 2026</dd>
               </div>
             </dl>
           </section>
