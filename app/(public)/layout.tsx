@@ -33,7 +33,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             Historical records relating to cross-dressing and gender non-conformity, 1785–1884
           </p>
           <p className="mt-2">
-            &copy; 2026 University of Waterloo
+            &copy; 2026 Fraser Easton
           </p>
         </div>
       </footer>
