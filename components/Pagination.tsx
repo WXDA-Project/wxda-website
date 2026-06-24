@@ -5,9 +5,10 @@ import { useSearchParams, useRouter } from 'next/navigation'
 interface PaginationProps {
   currentPage: number
   totalPages: number
+  basePath?: string
 }
 
-export default function Pagination({ currentPage, totalPages }: PaginationProps) {
+export default function Pagination({ currentPage, totalPages, basePath = '/search' }: PaginationProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -18,7 +19,7 @@ export default function Pagination({ currentPage, totalPages }: PaginationProps)
     if (page === 1) p.delete('page')
     else p.set('page', String(page))
     const str = p.toString()
-    router.push(`/search${str ? `?${str}` : ''}`, { scroll: true })
+    router.push(`${basePath}${str ? `?${str}` : ''}`, { scroll: true })
   }
 
   // Page number window for the desktop strip
