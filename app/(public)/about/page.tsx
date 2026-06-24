@@ -48,15 +48,6 @@ export default function AboutPage() {
               >
                 wxda@uwaterloo.ca
               </a>
-              . You can also follow us on Twitter at{' '}
-              <a
-                href="https://twitter.com/WXDAproject"
-                className="text-crimson underline hover:text-crimson-hover"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                @WXDAproject
-              </a>
               .
             </p>
           </section>
