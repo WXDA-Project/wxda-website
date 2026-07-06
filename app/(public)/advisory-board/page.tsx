@@ -1,10 +1,21 @@
 import type { Metadata } from 'next'
+import { Fragment } from 'react'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Advisory Board — Waterloo Cross-Dressing Archive',
   description:
     'Meet the scholars who advise the Waterloo Cross-Dressing Archive project.',
+}
+
+// Wrap text in *asterisks* to italicize it (e.g. for book/article titles).
+function renderBio(bio: string) {
+  return bio.split(/(\*[^*]+\*)/g).map((part, i) => {
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={i}>{part.slice(1, -1)}</em>
+    }
+    return <Fragment key={i}>{part}</Fragment>
+  })
 }
 
 const advisors = [
@@ -21,7 +32,7 @@ const advisors = [
   {
     name: 'Jeremy Chow',
     url: 'https://www.bucknell.edu/fac-staff/jeremy-chow',
-    bio: 'An assistant professor of English at Bucknell University (USA), Jeremy\'s research and teaching interests include British literature of the long eighteenth century, queer and sexuality studies, and the environmental humanities. He is editor of Eighteenth-Century Environmental Humanities (2023) and author of The Queerness of Water: Troubled Ecologies in the Eighteenth Century (2023).',
+    bio: 'Jeremy Chow is an associate professor of English and NEH Chair in the Humanities at Bucknell University (USA). In addition to two score articles and book chapters, Chow is the author of *The Queerness of Water: Troubled Ecologies in the Eighteenth Century* (2023) and the editor of *Eighteenth-Century Environmental Humanities* (2023), *The Edinburgh Companion to Queer Reading* (2025) with Declan Kavanagh, and *Unsettling Sexuality: Queer Horizons in the Eighteenth Century* (2025) with Shelby Johnson.',
   },
   {
     name: 'Ula Lukszo Klein',
@@ -74,7 +85,7 @@ export default function AdvisoryBoardPage() {
                 </Link>
               </h2>
               <p className="font-serif text-base leading-relaxed text-muted">
-                {advisor.bio}
+                {renderBio(advisor.bio)}
               </p>
             </li>
           ))}
