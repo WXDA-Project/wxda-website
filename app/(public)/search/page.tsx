@@ -119,7 +119,7 @@ function PersonResultsTable({
 }: {
   records: PersonRow[]
   personTableFields: FieldConfig[]
-  personConfig: { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string }
+  personConfig: { PERSON_GIVEN_NAME_KEY: string; PERSON_SURNAME_KEY: string; PERSON_TITLE_KEY: string }
   summaryKey?: string
   searchTerms?: string[]
 }) {

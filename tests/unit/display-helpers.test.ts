@@ -48,8 +48,8 @@ describe('documentDisplayTitle', () => {
 // ── personDisplayName ──────────────────────────────────────────────────────
 
 const PERSON_KEYS = {
-  PERSON_SORT_KEY: 'given_names',
-  PERSON_NAME_TITLE_KEY: 'surname',
+  PERSON_GIVEN_NAME_KEY: 'given_names',
+  PERSON_SURNAME_KEY: 'surname',
   PERSON_TITLE_KEY: 'full_name',
 }
 

@@ -172,46 +172,50 @@ Roles are selected from a dropdown. All roles in the dropdown are required and m
 
 ### Document Roles
 
-| Role | What the code uses it for |
+| Role | In plain terms |
 |---|---|
-| `primary-date` | Sorting records and driving the date range filter |
-| `location` | Rendering map links next to location values on record pages |
-| `author-ref` | Fetching and displaying the Author section on record pages |
-| `container-ref` | Fetching and displaying the Publication section on record pages |
-| `citation` | The "Cite as" text shown in the citation block |
-| `source-url` | The external source link in the citation block |
-| `doc-title` | The full formal title, shown when it differs from the display name |
-| `doc-name-title` | The primary display name used as the page heading |
-| `doc-summary` | A description or abstract shown near the top of record pages |
-| `doc-category` | The category badge shown on record pages |
+| `primary-date` | The date of the record. Used to sort records and to power the date-range filter on the search page. |
+| `location` | The place mentioned in the record. Shown with a map link on record pages. |
+| `author-ref` | Links a record to the person who wrote or created it. Powers the "Author" section on record pages. |
+| `container-ref` | Links a record to the periodical it appeared in (e.g. a specific newspaper). Powers the "Publication" section on record pages. |
+| `citation` | Not currently used — the "Cite as" text on record pages is now built automatically from other fields (date, author, title, publication) instead of read from this column. Still required in the dropdown, but you can ignore its content. |
+| `source-url` | A link to the original source outside this site. |
+| `doc-title` | The long, full title exactly as originally written — e.g. *"28 Feb 1785. On Masks and Masquerades. Times p. 1 c. B, C. Masquerade Editorial: OT proscription of men crossdressing, a man in 'the habit of a woman ... is the most ordinary disguise of our present masquerades.'"* **Note:** the site automatically trims the descriptive sentence off the end before showing this, so visitors only see the short citation-style line, e.g. *"28 Feb 1785. On Masks and Masquerades. Times p. 1 c. B, C."* |
+| `doc-name-title` | The short title people actually see as the page heading — e.g. *"No title."* or *"On Masks and Masquerades."* |
+| `doc-summary` | The short description or abstract of the record. |
+| `doc-category` | The category tag used to classify the record. |
 
 ### Person Roles
 
-| Role | What the code uses it for |
+| Role | In plain terms |
 |---|---|
-| `person-sort` | Sorting persons in search results |
-| `person-name-title` | The primary display name used as the page heading and in search results |
-| `person-title` | The full formal title, shown when it differs from the display name |
-| `person-type` | Drives the primary badge chip in the person profile header |
-| `person-summary` | A short description shown in the person header and in mentions on record pages |
+| `person-sort` | Controls the order people are listed in on search results. |
+| `person-name-title` | The person's main display name — shown as the page heading and in search results. |
+| `person-title` | The person's full, formal name or title. |
+| `person-type` | The type or category of person (e.g. author, subject). |
+| `person-summary` | A short description of the person. |
 
 ### Container Roles
 
-| Role | What the code uses it for |
+A "container" is a periodical or publication (e.g. a specific newspaper) that a record appeared in.
+
+| Role | In plain terms |
 |---|---|
-| `container-name-title` | Primary display name used throughout the site |
-| `container-short-name` | Abbreviated name shown alongside the full title |
-| `container-title` | Full formal title — used as a fallback if the display name is not set |
-| `container-summary` | Description shown in the Publication section on record pages |
-| `container-source-url` | External link shown in the Publication section on record pages |
+| `container-name-title` | The full name of the publication — e.g. *"Times of London"*. |
+| `container-short-name` | The short, abbreviated name — e.g. *"Times"*. |
+| `container-title` | The formal, full title — e.g. *"Times: Times of London"*. |
+| `container-summary` | A short description of the publication. |
+| `container-source-url` | A link to the original entry in Heurist (the archive this data was migrated from). No longer used on the site. |
 
 ### Relationship Roles
 
-| Role | What the code uses it for |
+A "relationship" links a document to a person mentioned in it (separate from the document's author).
+
+| Role | In plain terms |
 |---|---|
-| `relationship-source` | The column storing the document ID (the "from" side of the link) |
-| `relationship-target` | The column storing the person ID (the "to" side of the link) |
-| `relationship-type` | The label describing the relationship (e.g. "is Mentioned In") |
+| `relationship-source` | The column that stores which document the link is about. |
+| `relationship-target` | The column that stores which person the link is about. |
+| `relationship-type` | The column describing how the person relates to the document — e.g. *"is Mentioned In"*. |
 
 ---
 

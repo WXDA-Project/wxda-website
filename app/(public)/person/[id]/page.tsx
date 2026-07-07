@@ -28,12 +28,12 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const [person, { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }] = await Promise.all([
+  const [person, { PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY }] = await Promise.all([
     getPerson(Number(id)),
     getPersonConfig(),
   ])
   if (!person) return { title: 'Person Not Found' }
-  return { title: personDisplayName(person as unknown as PersonSummary, { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }) }
+  return { title: personDisplayName(person as unknown as PersonSummary, { PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY }) }
 }
 
 // ── Document list ──────────────────────────────────────────────────────────
@@ -105,7 +105,7 @@ export default async function PersonPage({
     [person, docs],
     {
       PERSON_DETAIL_FIELDS, PERSON_BADGE_FIELDS, PERSON_SUMMARY_KEY,
-      PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY,
+      PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY,
     },
     { SORT_DATE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY, DOC_NAME_TITLE_KEY, DOC_TITLE_KEY },
   ] = await Promise.all([
@@ -117,7 +117,7 @@ export default async function PersonPage({
   if (!person) notFound()
 
   const p = person as PersonSummary
-  const personKeys = { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }
+  const personKeys = { PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY }
   const docKeys: DocKeys = { DOC_NAME_TITLE_KEY, DOC_TITLE_KEY, SORT_DATE_KEY, DOC_SUMMARY_KEY, DOC_CATEGORY_KEY }
   const name = personDisplayName(p, personKeys)
 

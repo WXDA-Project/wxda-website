@@ -39,13 +39,13 @@ export function documentDisplayTitle(
 
 export function personDisplayName(
   p: PersonSummary,
-  keys: { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string },
+  keys: { PERSON_GIVEN_NAME_KEY: string; PERSON_SURNAME_KEY: string; PERSON_TITLE_KEY: string },
 ): string {
-  const givenNames = p[keys.PERSON_SORT_KEY] as string | null
-  const nameTitleRaw = p[keys.PERSON_NAME_TITLE_KEY]
-  const surname = Array.isArray(nameTitleRaw)
-    ? (nameTitleRaw as string[])[0]
-    : (nameTitleRaw as string | null)
+  const givenNames = p[keys.PERSON_GIVEN_NAME_KEY] as string | null
+  const surnameRaw = p[keys.PERSON_SURNAME_KEY]
+  const surname = Array.isArray(surnameRaw)
+    ? (surnameRaw as string[])[0]
+    : (surnameRaw as string | null)
   if (givenNames && surname) return `${givenNames} ${surname}`
   if (givenNames) return givenNames
   if (surname) return surname

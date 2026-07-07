@@ -171,18 +171,18 @@ export async function getPersonConfig() {
   const PERSON_BADGE_FIELDS              = FIELDS.filter((f) => f.badge)
   const PERSON_BADGE_KEYS                = PERSON_BADGE_FIELDS.map((f) => f.key)
 
-  const PERSON_SORT_KEY       = requireField(FIELDS, 'person-sort', 'person_field_config').key
-  const PERSON_NAME_TITLE_KEY = requireField(FIELDS, 'person-name-title', 'person_field_config').key
+  const PERSON_GIVEN_NAME_KEY = requireField(FIELDS, 'person-given-name', 'person_field_config').key
+  const PERSON_SURNAME_KEY    = requireField(FIELDS, 'person-surname', 'person_field_config').key
   const PERSON_TITLE_KEY      = requireField(FIELDS, 'person-title', 'person_field_config').key
   const PERSON_TYPE_KEY       = requireField(FIELDS, 'person-type', 'person_field_config').key
   const PERSON_SUMMARY_KEY    = requireField(FIELDS, 'person-summary', 'person_field_config').key
-  const PERSON_ENRICHMENT_COLUMNS = [...new Set(['id', PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY, PERSON_TYPE_KEY, PERSON_SUMMARY_KEY])].join(', ')
+  const PERSON_ENRICHMENT_COLUMNS = [...new Set(['id', PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY, PERSON_TYPE_KEY, PERSON_SUMMARY_KEY])].join(', ')
 
   return {
     FIELDS, PERSON_TABLE_FIELDS, PERSON_DETAIL_FIELDS,
     PERSON_FILTER_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_TEXT_FILTER_FIELDS,
     PERSON_BADGE_FIELDS, PERSON_BADGE_KEYS, PERSON_ENRICHMENT_COLUMNS,
-    PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY,
+    PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY,
     PERSON_TYPE_KEY, PERSON_SUMMARY_KEY,
   }
 }

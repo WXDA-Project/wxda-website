@@ -58,7 +58,7 @@ function Divider() {
   return <hr className="border-border my-6" />
 }
 
-type PersonKeys = { PERSON_SORT_KEY: string; PERSON_NAME_TITLE_KEY: string; PERSON_TITLE_KEY: string }
+type PersonKeys = { PERSON_GIVEN_NAME_KEY: string; PERSON_SURNAME_KEY: string; PERSON_TITLE_KEY: string }
 type ContainerKeys = {
   CONTAINER_NAME_TITLE_KEY: string; CONTAINER_SHORT_NAME_KEY: string; CONTAINER_TITLE_KEY: string
   CONTAINER_SUMMARY_KEY: string; CONTAINER_SOURCE_URL_KEY: string
@@ -124,7 +124,7 @@ export default async function RecordDetailPage({
     },
     {
       PERSON_TYPE_KEY, PERSON_SUMMARY_KEY,
-      PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY,
+      PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY,
     },
     {
       CONTAINER_NAME_TITLE_KEY, CONTAINER_SHORT_NAME_KEY, CONTAINER_TITLE_KEY,
@@ -153,7 +153,7 @@ export default async function RecordDetailPage({
 
   const geocodedSet = new Set(geocodedLocations)
 
-  const personKeys: PersonKeys = { PERSON_SORT_KEY, PERSON_NAME_TITLE_KEY, PERSON_TITLE_KEY }
+  const personKeys: PersonKeys = { PERSON_GIVEN_NAME_KEY, PERSON_SURNAME_KEY, PERSON_TITLE_KEY }
   const containerKeys: ContainerKeys = {
     CONTAINER_NAME_TITLE_KEY, CONTAINER_SHORT_NAME_KEY, CONTAINER_TITLE_KEY,
     CONTAINER_SUMMARY_KEY, CONTAINER_SOURCE_URL_KEY,

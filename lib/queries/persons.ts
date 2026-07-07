@@ -22,7 +22,7 @@ export interface PersonSearchResult {
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export async function searchPersons(params: PersonSearchParams): Promise<PersonSearchResult> {
-  const { PERSON_TABLE_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_TEXT_FILTER_FIELDS, PERSON_SORT_KEY, PERSON_ENRICHMENT_COLUMNS } =
+  const { PERSON_TABLE_FIELDS, PERSON_MULTISELECT_FILTER_FIELDS, PERSON_TEXT_FILTER_FIELDS, PERSON_GIVEN_NAME_KEY, PERSON_ENRICHMENT_COLUMNS } =
     await getPersonConfig()
 
   const PERSON_SEARCH_COLUMNS = [
@@ -57,7 +57,7 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
     if (value) query = query.ilike(field.key, `%${value}%`)
   }
 
-  query = query.order(PERSON_SORT_KEY, { ascending: true, nullsFirst: false }).range(from, to)
+  query = query.order(PERSON_GIVEN_NAME_KEY, { ascending: true, nullsFirst: false }).range(from, to)
 
   const { data, count, error } = await query
   if (error) throw new Error(error.message)

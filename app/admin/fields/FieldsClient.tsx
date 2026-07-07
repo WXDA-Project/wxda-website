@@ -88,7 +88,7 @@ const PERSON_COLS: ColDef[] = [
   },
   {
     key: 'role', label: 'Role', type: 'select', roleWarning: true, tableVisible: true,
-    options: ['', 'person-sort', 'person-name-title', 'person-title', 'person-type', 'person-summary'],
+    options: ['', 'person-given-name', 'person-surname', 'person-title', 'person-type', 'person-summary'],
     help: 'Tells the code how to use this field. All roles in the list are required and must each be assigned to exactly one field — the site will break if any role is missing or duplicated. Leave blank for display-only fields.',
   },
   {
