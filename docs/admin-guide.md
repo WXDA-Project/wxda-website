@@ -189,9 +189,9 @@ Roles are selected from a dropdown. All roles in the dropdown are required and m
 
 | Role | In plain terms |
 |---|---|
-| `person-sort` | Controls the order people are listed in on search results. |
-| `person-name-title` | The person's main display name — shown as the page heading and in search results. |
-| `person-title` | The person's full, formal name or title. |
+| `person-given-name` | The person's given (first) name — e.g. *"Lola"*. Combined with `person-surname` to form the display name shown as the page heading and in search results (e.g. *"Lola Montes"*). Also controls the order people are listed in on search results (sorted alphabetically by this field). |
+| `person-surname` | The person's surname — e.g. *"Montes"*. Combined with `person-given-name` to form the display name. |
+| `person-title` | A fallback full name, used only when both the given name and surname are missing. |
 | `person-type` | The type or category of person (e.g. author, subject). |
 | `person-summary` | A short description of the person. |
 
