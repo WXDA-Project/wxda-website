@@ -1,6 +1,7 @@
 import { cacheLife } from 'next/cache'
 import { supabase } from '../supabase'
-import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getPersonConfig } from '../config/db-config'
+import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getContainerConfig, getPersonConfig } from '../config/db-config'
+import { containerDisplayName, type ContainerSummary } from './types'
 import type { SearchParams } from './documents'
 import type { PersonSearchParams } from './persons'
 
@@ -135,4 +136,75 @@ export async function getPersonFacetCounts(
   )
 
   return Object.fromEntries(results)
+}
+
+// ── Container filter (documents belong to a publication/container) ────────
+// The `container` column stores a container id (text), not a display value,
+// so options/counts need a join against `containers` for the label.
+
+export interface ContainerFilterOption {
+  id: string
+  label: string
+}
+
+export async function getContainerFilterOptions(): Promise<ContainerFilterOption[]> {
+  'use cache: remote'
+  cacheLife('hours')
+  const { CONTAINER_FIELD_KEY } = await getDocumentConfig()
+  const { CONTAINER_SELECT_COLUMNS, CONTAINER_NAME_TITLE_KEY, CONTAINER_SHORT_NAME_KEY, CONTAINER_TITLE_KEY } =
+    await getContainerConfig()
+
+  const { data: docRows } = await supabase
+    .from('documents')
+    .select(CONTAINER_FIELD_KEY)
+    .not(CONTAINER_FIELD_KEY, 'is', null)
+    .eq(VISIBILITY_COLUMN, 'public')
+
+  const containerIds = [
+    ...new Set(((docRows ?? []) as unknown as Record<string, string>[]).map((d) => d[CONTAINER_FIELD_KEY]).filter(Boolean)),
+  ]
+  if (containerIds.length === 0) return []
+
+  const { data: containers } = await supabase
+    .from('containers')
+    .select(CONTAINER_SELECT_COLUMNS)
+    .in('id', containerIds.map(Number).filter((n) => Number.isFinite(n)))
+
+  return ((containers ?? []) as unknown as ContainerSummary[])
+    .map((c) => ({
+      id: String(c.id),
+      label: containerDisplayName(c, { CONTAINER_NAME_TITLE_KEY, CONTAINER_SHORT_NAME_KEY, CONTAINER_TITLE_KEY }, c.id as number),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+export async function getContainerFacetCounts(
+  params: Pick<SearchParams, 'q' | 'date_from' | 'date_to' | 'filters'>,
+): Promise<Record<string, number>> {
+  const { MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY, CONTAINER_FIELD_KEY } = await getDocumentConfig()
+
+  let query = supabase
+    .from('documents')
+    .select(CONTAINER_FIELD_KEY)
+    .not(CONTAINER_FIELD_KEY, 'is', null)
+    .eq(VISIBILITY_COLUMN, 'public')
+
+  if (params.q?.trim())
+    query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
+  if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
+  if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
+
+  for (const field of MULTISELECT_FILTER_FIELDS) {
+    const vals = params.filters?.[field.paramKey!] ?? []
+    if (vals.length > 0) query = query.overlaps(field.key, vals)
+  }
+
+  const { data } = await query
+  const rows = (data ?? []) as unknown as Record<string, string>[]
+  const counts: Record<string, number> = {}
+  for (const row of rows) {
+    const v = row[CONTAINER_FIELD_KEY]
+    if (v) counts[v] = (counts[v] ?? 0) + 1
+  }
+  return counts
 }

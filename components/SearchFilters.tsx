@@ -19,10 +19,10 @@ interface FilterDraft {
 
 // ── Pure helpers (no component state) ─────────────────────────────────────
 
-function draftFromParams(sp: URLSearchParams, multiselectFields: FieldConfig[], textFilterFields: FieldConfig[]): FilterDraft {
+function draftFromParams(sp: URLSearchParams, multiselectParamKeys: string[], textFilterFields: FieldConfig[]): FilterDraft {
   const multiselects: Record<string, string[]> = {}
-  for (const field of multiselectFields) {
-    multiselects[field.paramKey!] = sp.getAll(field.paramKey!)
+  for (const paramKey of multiselectParamKeys) {
+    multiselects[paramKey] = sp.getAll(paramKey)
   }
   const textFilters: Record<string, string> = {}
   for (const field of textFilterFields) {
@@ -67,6 +67,7 @@ function MultiselectGroup({
   label,
   paramKey,
   options,
+  optionLabels,
   selected,
   counts,
   onChange,
@@ -74,6 +75,8 @@ function MultiselectGroup({
   label: string
   paramKey: string
   options: string[]
+  /** Display label for each option value, when it differs from the value itself (e.g. a container id vs. its name). */
+  optionLabels?: Record<string, string>
   selected: string[]
   counts?: Record<string, number>
   onChange: (key: string, values: string[]) => void
@@ -140,7 +143,7 @@ function MultiselectGroup({
                     onChange={() => toggle(opt)}
                     className="mt-0.5 shrink-0 accent-crimson"
                   />
-                  <span className="flex-1 min-w-0">{opt}</span>
+                  <span className="flex-1 min-w-0">{optionLabels?.[opt] ?? opt}</span>
                   {counts && (
                     <span className="text-xs text-muted tabular-nums shrink-0">
                       {count.toLocaleString()}
@@ -224,6 +227,13 @@ function DateRangeGroup({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
+interface ContainerFilterProps {
+  label: string
+  paramKey: string
+  options: { id: string; label: string }[]
+  counts?: Record<string, number>
+}
+
 interface SearchFiltersProps {
   filterFields: FieldConfig[]
   dateFilterField?: FieldConfig
@@ -233,6 +243,7 @@ interface SearchFiltersProps {
   filterOptions: Record<string, string[]>
   filterCounts?: Record<string, Record<string, number>>
   showKeywordSearch?: boolean
+  containerFilter?: ContainerFilterProps
 }
 
 export default function SearchFilters({
@@ -244,6 +255,7 @@ export default function SearchFilters({
   filterOptions,
   filterCounts,
   showKeywordSearch = true,
+  containerFilter,
 }: SearchFiltersProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -252,21 +264,25 @@ export default function SearchFilters({
   const hasDateRange = filterFields.some((f) => f.filterType === 'date-range')
   const multiselectFields = filterFields.filter((f) => f.filterType === 'multiselect')
   const textFilterFields = filterFields.filter((f) => f.filterType === 'text')
+  const multiselectParamKeys = [
+    ...multiselectFields.map((f) => f.paramKey!),
+    ...(containerFilter ? [containerFilter.paramKey] : []),
+  ]
 
   const spStr = searchParams.toString()
   const [prevSpStr, setPrevSpStr] = useState(spStr)
   const [draft, setDraft] = useState<FilterDraft>(() =>
-    draftFromParams(searchParams, multiselectFields, textFilterFields),
+    draftFromParams(searchParams, multiselectParamKeys, textFilterFields),
   )
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Re-sync draft when URL changes externally (pill X clicks, clear all, tab switches)
   if (prevSpStr !== spStr) {
     setPrevSpStr(spStr)
-    setDraft(draftFromParams(searchParams, multiselectFields, textFilterFields))
+    setDraft(draftFromParams(searchParams, multiselectParamKeys, textFilterFields))
   }
 
-  const urlDraft = draftFromParams(searchParams, multiselectFields, textFilterFields)
+  const urlDraft = draftFromParams(searchParams, multiselectParamKeys, textFilterFields)
   const activeCount = countActive(urlDraft)
   const draftCount = countActive(draft)
   const isDirty = buildURL(draft, basePath, tab) !== buildURL(urlDraft, basePath, tab)
@@ -282,7 +298,7 @@ export default function SearchFilters({
 
   function clearAll() {
     const emptyMultiselects: Record<string, string[]> = {}
-    for (const field of multiselectFields) emptyMultiselects[field.paramKey!] = []
+    for (const paramKey of multiselectParamKeys) emptyMultiselects[paramKey] = []
     const emptyTextFilters: Record<string, string> = {}
     for (const field of textFilterFields) emptyTextFilters[field.paramKey!] = ''
     setDraft({ q: '', date_from: '', date_to: '', multiselects: emptyMultiselects, textFilters: emptyTextFilters })
@@ -391,6 +407,19 @@ export default function SearchFilters({
             onChange={handleMultiselect}
           />
         ))}
+
+        {/* Container filter — options are container ids, labelled with the container's display name */}
+        {containerFilter && (
+          <MultiselectGroup
+            label={containerFilter.label}
+            paramKey={containerFilter.paramKey}
+            options={containerFilter.options.map((o) => o.id)}
+            optionLabels={Object.fromEntries(containerFilter.options.map((o) => [o.id, o.label]))}
+            selected={draft.multiselects[containerFilter.paramKey] ?? []}
+            counts={containerFilter.counts}
+            onChange={handleMultiselect}
+          />
+        )}
       </div>
 
       {/* Apply footer */}

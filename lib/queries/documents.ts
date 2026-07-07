@@ -11,6 +11,7 @@ export interface SearchParams {
   date_to?: string
   filters?: Record<string, string[]>
   textFilters?: Record<string, string>
+  containerIds?: string[]
   page?: number
 }
 
@@ -31,7 +32,7 @@ export interface DocumentEnrichment {
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export async function searchDocuments(params: SearchParams): Promise<SearchResult> {
-  const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
+  const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, SORT_DATE_KEY, CONTAINER_FIELD_KEY } = await getDocumentConfig()
 
   const TABLE_COLUMNS = [...new Set(['id', ...TABLE_FIELDS.map((f) => f.key)])].join(', ')
 
@@ -61,6 +62,8 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     const value = params.textFilters?.[field.paramKey!]?.trim()
     if (value) query = query.ilike(field.key, `%${value}%`)
   }
+
+  if (params.containerIds?.length) query = query.in(CONTAINER_FIELD_KEY, params.containerIds)
 
   query = query.order(SORT_DATE_KEY, { ascending: true, nullsFirst: false }).range(from, to)
 
@@ -185,7 +188,7 @@ export async function getArchiveDates(): Promise<(string | null)[]> {
 export async function searchDocumentDates(
   params: Omit<SearchParams, 'page'>,
 ): Promise<(string | null)[]> {
-  const { MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, SORT_DATE_KEY } = await getDocumentConfig()
+  const { MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, SORT_DATE_KEY, CONTAINER_FIELD_KEY } = await getDocumentConfig()
 
   let query = supabase
     .from('documents')
@@ -208,6 +211,8 @@ export async function searchDocumentDates(
     const value = params.textFilters?.[field.paramKey!]?.trim()
     if (value) query = query.ilike(field.key, `%${value}%`)
   }
+
+  if (params.containerIds?.length) query = query.in(CONTAINER_FIELD_KEY, params.containerIds)
 
   const { data } = await query
   return (data as unknown as Record<string, string | null>[] ?? []).map((d) => d[SORT_DATE_KEY])

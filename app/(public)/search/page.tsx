@@ -7,6 +7,8 @@ import {
   getArchiveDates,
   getDocumentFilterOptions,
   getDocumentFacetCounts,
+  getContainerFilterOptions,
+  getContainerFacetCounts,
   searchPersons,
   getPersonFilterOptions,
   getPersonFacetCounts,
@@ -15,7 +17,7 @@ import {
   type PersonRow,
   type PersonSummary,
 } from '@/lib/queries'
-import { getDocumentConfig, getPersonConfig, type FieldConfig } from '@/lib/config/db-config'
+import { getDocumentConfig, getPersonConfig, requireField, type FieldConfig } from '@/lib/config/db-config'
 import SearchFilters from '@/components/SearchFilters'
 import Pagination from '@/components/Pagination'
 import TabNav from '@/components/TabNav'
@@ -211,7 +213,9 @@ export default async function SearchPage({
   // ── Records search ─────────────────────────────────────────────────────────
   if (tab === 'records') {
     const [docConfig] = await Promise.all([getDocumentConfig()])
-    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD, DOC_SUMMARY_KEY, DOC_NAME_TITLE_KEY } = docConfig
+    const { TABLE_FIELDS, MULTISELECT_FILTER_FIELDS, TEXT_FILTER_FIELDS, FILTER_FIELDS, DATE_FILTER_FIELD, DOC_SUMMARY_KEY, DOC_NAME_TITLE_KEY, FIELDS } = docConfig
+    const CONTAINER_FILTER_LABEL = requireField(FIELDS, 'container-ref', 'document_field_config').label
+    const CONTAINER_PARAM_KEY = 'container'
 
     const date_from = (sp.date_from as string | undefined) ?? undefined
     const date_to = (sp.date_to as string | undefined) ?? undefined
@@ -225,13 +229,16 @@ export default async function SearchPage({
       const val = sp[field.paramKey!] as string | undefined
       if (val) textFilters[field.paramKey!] = val
     }
+    const containerIds = normalise(sp[CONTAINER_PARAM_KEY])
 
-    const [result, archiveDates, filteredDates, filterOptions, filterCounts] = await Promise.all([
-      searchDocuments({ q, date_from, date_to, filters, textFilters, page }),
+    const [result, archiveDates, filteredDates, filterOptions, filterCounts, containerOptions, containerCounts] = await Promise.all([
+      searchDocuments({ q, date_from, date_to, filters, textFilters, containerIds, page }),
       getArchiveDates(),
-      searchDocumentDates({ q, date_from, date_to, filters, textFilters }),
+      searchDocumentDates({ q, date_from, date_to, filters, textFilters, containerIds }),
       getDocumentFilterOptions(),
       getDocumentFacetCounts({ q, date_from, date_to, filters }),
+      getContainerFilterOptions(),
+      getContainerFacetCounts({ q, date_from, date_to, filters }),
     ])
 
     const sortedDates = (archiveDates.filter(Boolean) as string[]).sort()
@@ -260,11 +267,25 @@ export default async function SearchPage({
                 dateBounds={dateBounds}
                 filterOptions={filterOptions}
                 filterCounts={filterCounts}
+                containerFilter={{
+                  label: CONTAINER_FILTER_LABEL,
+                  paramKey: CONTAINER_PARAM_KEY,
+                  options: containerOptions,
+                  counts: containerCounts,
+                }}
               />
             </Suspense>
           </div>
           <div className="flex-1 min-w-0">
-            <ActiveFilters multiselectFields={MULTISELECT_FILTER_FIELDS} textFilterFields={TEXT_FILTER_FIELDS} />
+            <ActiveFilters
+              multiselectFields={MULTISELECT_FILTER_FIELDS}
+              textFilterFields={TEXT_FILTER_FIELDS}
+              containerFilter={{
+                label: CONTAINER_FILTER_LABEL,
+                paramKey: CONTAINER_PARAM_KEY,
+                labels: Object.fromEntries(containerOptions.map((o) => [o.id, o.label])),
+              }}
+            />
             <p className="text-sm mb-3 text-muted">
               {result.total === 0 ? 'No records match your search.' : (
                 <>Showing <strong className="text-ink">{firstResult}–{lastResult}</strong> of <strong className="text-ink">{result.total.toLocaleString()}</strong> record{result.total !== 1 ? 's' : ''}</>
