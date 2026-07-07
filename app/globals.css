@@ -128,9 +128,12 @@ mark {
   color: var(--color-ink);
 }
 .blog-content > * + * { margin-top: 1.25em; }
+.blog-content h1 { font-family: var(--font-serif); font-size: 1.85rem; font-weight: 700; line-height: 1.2; margin-top: 2.25em; }
 .blog-content h2 { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; line-height: 1.25; margin-top: 2em; }
 .blog-content h3 { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin-top: 1.75em; }
 .blog-content h4 { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; margin-top: 1.5em; }
+.blog-content h5 { font-family: var(--font-serif); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.01em; margin-top: 1.5em; }
+.blog-content h6 { font-family: var(--font-serif); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-top: 1.5em; }
 .blog-content strong { font-weight: 700; }
 .blog-content em { font-style: italic; }
 .blog-content a { color: var(--color-crimson); text-underline-offset: 2px; }
