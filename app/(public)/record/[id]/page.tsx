@@ -40,6 +40,12 @@ function formatValue(value: unknown): string | null {
   return str || null
 }
 
+// Some records have the summary text duplicated at the end of the full title.
+function stripSummarySuffix(fullTitle: string, summary: string | null | undefined): string {
+  if (summary && fullTitle.endsWith(summary)) return fullTitle.slice(0, -summary.length).trimEnd()
+  return fullTitle
+}
+
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="text-xs font-bold uppercase tracking-widest mb-3 text-muted">
@@ -155,6 +161,9 @@ export default async function RecordDetailPage({
   const docKeys = { DOC_NAME_TITLE_KEY, DOC_TITLE_KEY }
 
   const title = documentDisplayTitle(rec, docKeys, id)
+  const fullTitle = rec[DOC_TITLE_KEY]
+    ? stripSummarySuffix(rec[DOC_TITLE_KEY] as string, rec[DOC_SUMMARY_KEY] as string | null)
+    : null
 
   // ── MLA citation ────────────────────────────────────────────────────────────
   const baseUrl = `${headersList.get('x-forwarded-proto') ?? 'https'}://${headersList.get('host')}`
@@ -188,8 +197,8 @@ export default async function RecordDetailPage({
   if (rec[DOC_SUMMARY_KEY])
     pdfSections.push({ heading: 'Summary', rows: [{ label: '', value: rec[DOC_SUMMARY_KEY] as string }] })
 
-  if (rec[DOC_TITLE_KEY] && rec[DOC_TITLE_KEY] !== title)
-    pdfSections.push({ heading: 'Full Title', rows: [{ label: '', value: rec[DOC_TITLE_KEY] as string }] })
+  if (fullTitle && fullTitle !== title)
+    pdfSections.push({ heading: 'Full Title', rows: [{ label: '', value: fullTitle }] })
 
   if (enrichment.container) {
     const c = enrichment.container
@@ -289,12 +298,12 @@ export default async function RecordDetailPage({
         )}
 
         {/* ── Full verbatim title ──────────────────────────────────────────── */}
-        {(rec[DOC_TITLE_KEY] as string | null) && rec[DOC_TITLE_KEY] !== title && (
+        {fullTitle && fullTitle !== title && (
           <>
             <section aria-label="Full title">
               <SectionHeading>Full Title</SectionHeading>
               <p className="text-sm leading-relaxed italic text-ink">
-                {rec[DOC_TITLE_KEY] as string}
+                {fullTitle}
               </p>
             </section>
             <Divider />
