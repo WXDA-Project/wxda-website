@@ -3,6 +3,35 @@ export function normalise(v: string | string[] | undefined): string[] {
   return Array.isArray(v) ? v : [v]
 }
 
+/**
+ * Multiselect filter values are stored as plain strings for "include" and
+ * `!`-prefixed strings for "exclude" (set by the tri-state checkbox in
+ * SearchFilters). Query builders split a field's raw values into the two
+ * sets before applying them.
+ */
+export function splitFilterValues(values: string[]): { include: string[]; exclude: string[] } {
+  const include: string[] = []
+  const exclude: string[] = []
+  for (const v of values) {
+    if (v.startsWith('!')) exclude.push(v.slice(1))
+    else include.push(v)
+  }
+  return { include, exclude }
+}
+
+/**
+ * Builds a PostgREST `.or()` filter string that excludes rows matching any of
+ * `values`, while still keeping rows where `column` is null. A plain
+ * `.not(column, 'ov'|'in', ...)` would drop null rows too — in Postgres,
+ * `NOT (null && x)` and `NOT (null IN (...))` evaluate to null, not true, so
+ * rows with no value in the field fail the filter even though they can't
+ * possibly contain the excluded value.
+ */
+export function excludeFilter(column: string, values: string[], mode: 'ov' | 'in'): string {
+  const value = mode === 'ov' ? `{${values.join(',')}}` : `(${values.join(',')})`
+  return `${column}.is.null,${column}.not.${mode}.${value}`
+}
+
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr.length === 4 ? `${dateStr}-01-01` : dateStr)

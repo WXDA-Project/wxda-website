@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { VISIBILITY_COLUMN, getDocumentConfig } from '../config/db-config'
 import { documentDisplayTitle } from './types'
 import type { SearchParams } from './documents'
+import { splitFilterValues, excludeFilter } from '../search-utils'
 
 export interface MapPin {
   location: string
@@ -22,14 +23,14 @@ export async function getGeocodedLocations(): Promise<string[]> {
 }
 
 export async function getMapPins(
-  params?: Pick<SearchParams, 'date_from' | 'date_to' | 'filters'> & {
+  params?: Pick<SearchParams, 'date_from' | 'date_to' | 'filters' | 'containerIds'> & {
     /** When set, restricts pins to documents that include this exact location value. */
     locationFocus?: string
   },
 ): Promise<MapPin[]> {
   const {
     SORT_DATE_KEY, LOCATION_FIELD_KEY, DOC_TITLE_KEY, DOC_NAME_TITLE_KEY, DOC_SUMMARY_KEY,
-    MULTISELECT_FILTER_FIELDS,
+    CONTAINER_FIELD_KEY, MULTISELECT_FILTER_FIELDS,
   } = await getDocumentConfig()
 
   let docsQuery = supabase
@@ -41,8 +42,14 @@ export async function getMapPins(
   if (params?.date_from) docsQuery = docsQuery.gte(SORT_DATE_KEY, params.date_from)
   if (params?.date_to)   docsQuery = docsQuery.lte(SORT_DATE_KEY, params.date_to)
   for (const field of MULTISELECT_FILTER_FIELDS) {
-    const vals = params?.filters?.[field.paramKey!] ?? []
-    if (vals.length > 0) docsQuery = docsQuery.overlaps(field.key, vals)
+    const { include, exclude } = splitFilterValues(params?.filters?.[field.paramKey!] ?? [])
+    if (include.length > 0) docsQuery = docsQuery.overlaps(field.key, include)
+    if (exclude.length > 0) docsQuery = docsQuery.or(excludeFilter(field.key, exclude, 'ov'))
+  }
+  if (params?.containerIds?.length) {
+    const { include, exclude } = splitFilterValues(params.containerIds)
+    if (include.length > 0) docsQuery = docsQuery.in(CONTAINER_FIELD_KEY, include)
+    if (exclude.length > 0) docsQuery = docsQuery.or(excludeFilter(CONTAINER_FIELD_KEY, exclude, 'in'))
   }
   // locationFocus restricts to a single location (used by "View on map" links from record detail)
   if (params?.locationFocus)

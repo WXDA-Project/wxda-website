@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getPersonConfig, getRelationshipConfig } from '../config/db-config'
 import { PAGE_SIZE, PersonRow, PersonSummary } from './types'
+import { splitFilterValues, excludeFilter } from '../search-utils'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,11 +44,13 @@ export async function searchPersons(params: PersonSearchParams): Promise<PersonS
   }
 
   for (const field of PERSON_MULTISELECT_FILTER_FIELDS) {
-    const values = params.filters?.[field.paramKey!] ?? []
-    if (values.length > 0) {
-      query = field.isArray
-        ? query.overlaps(field.key, values)
-        : query.in(field.key, values)
+    const { include, exclude } = splitFilterValues(params.filters?.[field.paramKey!] ?? [])
+    if (field.isArray) {
+      if (include.length > 0) query = query.overlaps(field.key, include)
+      if (exclude.length > 0) query = query.or(excludeFilter(field.key, exclude, 'ov'))
+    } else {
+      if (include.length > 0) query = query.in(field.key, include)
+      if (exclude.length > 0) query = query.or(excludeFilter(field.key, exclude, 'in'))
     }
   }
 
