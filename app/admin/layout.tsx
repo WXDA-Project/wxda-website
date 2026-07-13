@@ -12,6 +12,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/blog" className="text-xs opacity-70 hover:opacity-100 transition-opacity text-paper no-underline">
             Blog
           </Link>
+          <Link href="/admin/news" className="text-xs opacity-70 hover:opacity-100 transition-opacity text-paper no-underline">
+            News
+          </Link>
+          <Link href="/admin/advisory-board" className="text-xs opacity-70 hover:opacity-100 transition-opacity text-paper no-underline">
+            Advisory Board
+          </Link>
+          <Link href="/admin/pages" className="text-xs opacity-70 hover:opacity-100 transition-opacity text-paper no-underline">
+            Page Content
+          </Link>
         </nav>
         <form action="/api/auth/signout" method="POST">
           <button

@@ -137,16 +137,18 @@ wxda-website/
 │   │   │   └── page.tsx        # Interactive map page
 │   │   ├── about/
 │   │   │   ├── page.tsx        # About the project (mission, acknowledgements, coverage)
-│   │   │   └── overview/
-│   │   │       └── page.tsx    # Project overview, aims, and methodology
+│   │   │   ├── history/
+│   │   │   │   └── page.tsx    # Project history, aims, and methodology
+│   │   │   └── news/
+│   │   │       └── page.tsx    # Full news timeline
 │   │   ├── advisory-board/
-│   │   │   └── page.tsx        # Scholarly advisory board profiles
+│   │   │   └── page.tsx        # Scholarly advisory board profiles (bios rendered as Markdown)
 │   │   └── blog/
 │   │       ├── page.tsx        # Blog post list
 │   │       └── [slug]/
 │   │           └── page.tsx    # Individual blog post (ReactMarkdown + rehype-raw)
 │   ├── admin/                  # Admin area (separate minimal layout, no public nav)
-│   │   ├── layout.tsx          # Admin header (WXDA Admin label + sign out)
+│   │   ├── layout.tsx          # Admin header (nav links + sign out)
 │   │   ├── login/
 │   │   │   ├── page.tsx        # Email/password login form
 │   │   │   └── actions.ts      # signIn server action
@@ -154,14 +156,38 @@ wxda-website/
 │   │   │   ├── page.tsx        # Field config editor (4-tab CRUD table)
 │   │   │   ├── actions.ts      # saveField, addField, deleteField server actions
 │   │   │   └── FieldsClient.tsx # Client component — edit dialog + table
-│   │   └── blog/
-│   │       ├── page.tsx        # Blog post list with edit/delete actions
-│   │       ├── actions.ts      # savePost, deletePost server actions (cache invalidation + storage cleanup)
-│   │       ├── BlogPostActions.tsx # Client component — delete confirmation
-│   │       ├── new/
-│   │       │   └── page.tsx    # New post page
+│   │   ├── blog/
+│   │   │   ├── page.tsx        # Blog post list with edit/delete actions
+│   │   │   ├── actions.ts      # savePost, deletePost server actions (cache invalidation + storage cleanup)
+│   │   │   ├── BlogPostActions.tsx # Client component — delete confirmation
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx    # New post page
+│   │   │   └── [id]/edit/
+│   │   │       └── page.tsx    # Edit existing post page
+│   │   ├── news/
+│   │   │   ├── page.tsx        # News item list with edit/delete actions
+│   │   │   ├── actions.ts      # saveNewsItem, deleteNewsItem server actions
+│   │   │   ├── NewsForm.tsx    # Shared form (date + text) for new/edit
+│   │   │   ├── NewsItemActions.tsx # Client component — delete confirmation
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx    # New news item page
+│   │   │   └── [id]/edit/
+│   │   │       └── page.tsx    # Edit existing news item page
+│   │   ├── advisory-board/
+│   │   │   ├── page.tsx        # Advisor list with edit/delete actions
+│   │   │   ├── actions.ts      # saveAdvisor, deleteAdvisor server actions
+│   │   │   ├── AdvisorForm.tsx # Form (name, url, sort order + MDXEditor bio) for new/edit
+│   │   │   ├── AdvisorActions.tsx # Client component — delete confirmation
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx    # New advisor page
+│   │   │   └── [id]/edit/
+│   │   │       └── page.tsx    # Edit existing advisor page
+│   │   └── pages/
+│   │       ├── page.tsx        # List of editable page-content blocks
+│   │       ├── actions.ts      # savePageContent server action
+│   │       ├── PageContentEditor.tsx # MDXEditor wrapper for a single content block
 │   │       └── [id]/edit/
-│   │           └── page.tsx    # Edit existing post page
+│   │           └── page.tsx    # Edit a page-content block
 │   └── api/
 │       ├── auth/signout/
 │       │   └── route.ts        # POST → signs out + redirects to /admin/login
@@ -181,7 +207,7 @@ wxda-website/
 │   └── MDXEditorClient.tsx      # Client-only MDXEditor wrapper with Supabase image upload
 ├── lib/
 │   ├── supabase.ts              # Server-only public data client (anon key, no auth)
-│   ├── auth.ts                  # Server auth helpers
+│   ├── auth.ts                  # Server auth helpers (requireUser)
 │   ├── search-utils.ts          # Shared search/filter utilities
 │   ├── supabase/
 │   │   ├── client.ts           # Browser auth client (createBrowserClient)
@@ -196,7 +222,10 @@ wxda-website/
 │       ├── persons.ts          # Person search, fetch, person-document links
 │       ├── map.ts              # Map pin query
 │       ├── filters.ts          # Cached filter option generation
-│       └── blog.ts             # Blog post queries (getBlogPosts, getBlogPost)
+│       ├── blog.ts             # Blog post queries (getBlogPosts, getBlogPost)
+│       ├── news.ts             # News item queries (getNewsItems)
+│       ├── advisoryBoard.ts    # Advisory board queries (getAdvisors)
+│       └── pageContent.ts      # Editable page prose queries (getPageContent, getPageContentMap)
 ├── tests/
 │   ├── unit/
 │   │   ├── display-helpers.test.ts  # Jest unit tests for display helper functions
@@ -249,6 +278,17 @@ geocode_cache
 blog_posts
    └─ id, slug, title, summary, cover_image_url, content (markdown), published_at, updated_at
 
+news_items
+   └─ id, item_date, text — feeds the home page sidebar and /about/news
+
+advisory_board
+   └─ id, name, url, bio (markdown), sort_order — feeds /advisory-board
+
+page_content
+   └─ id, key, label, content (markdown), updated_at — editable titles, the
+      shared eyebrow line, full-page prose (About/History), and the footer
+      (see Content Management below)
+
 document_field_config    ┐
 person_field_config      │ Field config — 4 tables managed by the admin UI.
 container_field_config   │ Read at runtime by lib/config/db-config.ts.
@@ -269,3 +309,14 @@ All field configuration (column names, labels, filter types, display flags, role
 | `relationship_field_config` | `relationships` | Relationships |
 
 **To change any field** — log in at `/admin/login` and edit through the admin UI. No code changes or redeployment needed. See [docs/admin-guide.md](docs/admin-guide.md) for a full reference.
+
+## Content Management
+
+Most user-facing text is editable by non-technical users through the admin UI, without touching code:
+
+| Admin route | Edits | Public pages affected |
+|---|---|---|
+| `/admin/blog` | Blog posts (title, summary, cover image, Markdown body) | `/blog`, `/blog/[slug]` |
+| `/admin/news` | News items (date + text) | `/`, `/about/news` |
+| `/admin/advisory-board` | Advisory board members (name, profile URL, Markdown bio, sort order) | `/advisory-board` |
+| `/admin/pages` | Page H1 titles, the shared eyebrow line above them, full-page prose for About/History (Markdown, headings included), and the footer | Every public page |

@@ -1,7 +1,11 @@
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
 import NavMenu from '@/components/NavMenu'
+import { getPageContent } from '@/lib/queries'
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const footer = await getPageContent('footer.body')
+
   return (
     <>
       <a href="#main-content" className="skip-nav">
@@ -27,14 +31,8 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       </main>
 
       <footer className="bg-header-bg text-header-fg" role="contentinfo">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm opacity-80">
-          <p>
-            Waterloo Cross-Dressing Archive (WXDA) — University of Waterloo.
-            Historical records relating to cross-dressing and gender non-conformity, 1785–1884
-          </p>
-          <p className="mt-2">
-            &copy; 2026 Fraser Easton
-          </p>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm opacity-80 [&>p+p]:mt-2">
+          <ReactMarkdown>{footer}</ReactMarkdown>
         </div>
       </footer>
     </>

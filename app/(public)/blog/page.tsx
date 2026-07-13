@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { getBlogPosts } from '@/lib/queries/blog'
+import { getPageContentMap } from '@/lib/queries'
 import Pagination from '@/components/Pagination'
 
 export const metadata: Metadata = {
@@ -28,7 +29,10 @@ async function BlogContent({
 }) {
   const { page: pageParam } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1') || 1)
-  const { posts, total } = await getBlogPosts(page)
+  const [{ posts, total }, content] = await Promise.all([
+    getBlogPosts(page),
+    getPageContentMap(),
+  ])
   const totalPages = Math.ceil(total / 10)
 
   return (
@@ -37,10 +41,10 @@ async function BlogContent({
 
         <header className="mb-10">
           <p className="text-xs tracking-widest uppercase text-muted font-sans mb-3">
-            Waterloo Cross-Dressing Archive
+            {content['site.eyebrow'] ?? ''}
           </p>
           <h1 className="font-serif text-4xl sm:text-5xl font-bold text-ink leading-tight">
-            Blog
+            {content['blog.title'] ?? ''}
           </h1>
           <div className="mt-5 border-t-2 border-ink" />
         </header>
