@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { getPageContentMap } from '@/lib/queries'
 
 export const metadata: Metadata = {
@@ -26,7 +28,7 @@ export default async function AboutPage() {
         </header>
 
         <article className="text-ink font-serif mb-10 [&>p]:text-base sm:[&>p]:text-lg [&>p]:leading-relaxed [&>p]:text-muted [&>p]:mb-5 [&_a]:text-crimson [&_a]:underline hover:[&_a]:text-crimson-hover [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-ink [&_h2]:mt-10 [&_h2]:pt-10 [&_h2]:mb-5 [&_h2]:border-t [&_h2]:border-border [&_hr]:mt-10 [&_hr]:mb-5 [&_hr]:border-border">
-          <ReactMarkdown>{content['about.body'] ?? ''}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{content['about.body'] ?? ''}</ReactMarkdown>
         </article>
       </div>
     </div>

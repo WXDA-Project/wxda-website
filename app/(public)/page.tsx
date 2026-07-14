@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import HomeSearchBar from '@/components/HomeSearchBar'
 import RandomEntryButton from '@/components/RandomEntryButton'
 import { getNewsItems, getPageContent } from '@/lib/queries'
@@ -47,7 +49,7 @@ export default async function HomePage() {
               Welcome
             </h2>
             <div className="font-serif text-base leading-relaxed text-muted space-y-5 [&_strong]:text-ink">
-              <ReactMarkdown>{welcome}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{welcome}</ReactMarkdown>
             </div>
           </div>
 

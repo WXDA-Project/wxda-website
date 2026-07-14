@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { getPageContentMap } from '@/lib/queries'
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export default async function HistoryPage() {
         </header>
 
         <article className="text-ink font-serif [&>p]:text-base sm:[&>p]:text-lg [&>p]:leading-relaxed [&>p]:text-muted [&>p]:mb-5 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-ink [&_h2]:mt-10 [&_h2]:pt-10 [&_h2]:mb-5 [&_h2]:border-t [&_h2]:border-border [&_ol]:mb-5 [&_ol]:space-y-3 [&_ol]:list-decimal [&_ol]:list-outside [&_ol]:pl-6 [&_ol]:text-muted [&_ul]:mb-5 [&_ul]:space-y-3 [&_ul]:list-disc [&_ul]:list-outside [&_ul]:pl-6 [&_ul]:text-muted [&_li]:text-base sm:[&_li]:text-lg [&_li]:leading-relaxed">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content['history.body'] ?? ''}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{content['history.body'] ?? ''}</ReactMarkdown>
         </article>
       </div>
     </div>

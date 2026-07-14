@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import NavMenu from '@/components/NavMenu'
 import { getPageContent } from '@/lib/queries'
 
@@ -32,7 +34,7 @@ export default async function PublicLayout({ children }: { children: React.React
 
       <footer className="bg-header-bg text-header-fg" role="contentinfo">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm opacity-80 [&>p+p]:mt-2">
-          <ReactMarkdown>{footer}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{footer}</ReactMarkdown>
         </div>
       </footer>
     </>

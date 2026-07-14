@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { getAdvisors, getPageContentMap } from '@/lib/queries'
 
 export const metadata: Metadata = {
@@ -27,9 +29,11 @@ export default async function AdvisoryBoardPage() {
             {content['advisory-board.title'] ?? ''}
           </h1>
           <div className="mt-5 border-t-2 border-ink" />
-          <p className="mt-7 font-serif text-base sm:text-lg text-muted leading-relaxed">
-            {content['advisory-board.intro'] ?? ''}
-          </p>
+          <div className="mt-7 font-serif text-base sm:text-lg text-muted leading-relaxed [&>p]:m-0">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {content['advisory-board.intro'] ?? ''}
+            </ReactMarkdown>
+          </div>
         </header>
 
         <ul className="list-none m-0 p-0 border-t border-border divide-y divide-border">
@@ -50,7 +54,7 @@ export default async function AdvisoryBoardPage() {
                 )}
               </h2>
               <div className="font-serif text-base leading-relaxed text-muted [&>p]:m-0">
-                <ReactMarkdown>{advisor.bio}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{advisor.bio}</ReactMarkdown>
               </div>
             </li>
           ))}
