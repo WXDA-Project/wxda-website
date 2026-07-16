@@ -236,9 +236,9 @@ export default async function SearchPage({
       getArchiveDates(),
       searchDocumentDates({ q, date_from, date_to, filters, textFilters, containerIds }),
       getDocumentFilterOptions(),
-      getDocumentFacetCounts({ q, date_from, date_to, filters }),
+      getDocumentFacetCounts({ q, date_from, date_to, filters, containerIds }),
       getContainerFilterOptions(),
-      getContainerFacetCounts({ q, date_from, date_to, filters }),
+      getContainerFacetCounts({ q, date_from, date_to, filters, containerIds }),
     ])
 
     const sortedDates = (archiveDates.filter(Boolean) as string[]).sort()

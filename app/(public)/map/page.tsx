@@ -1,7 +1,14 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { getMapPins, getDocumentFilterOptions, getDocumentFacetCounts, getGeocodedLocations } from '@/lib/queries'
-import { getDocumentConfig } from '@/lib/config/db-config'
+import {
+  getMapPins,
+  getDocumentFilterOptions,
+  getDocumentFacetCounts,
+  getGeocodedLocations,
+  getContainerFilterOptions,
+  getContainerFacetCounts,
+} from '@/lib/queries'
+import { getDocumentConfig, requireField } from '@/lib/config/db-config'
 import DocumentMap from '@/components/DocumentMap'
 import SearchFilters from '@/components/SearchFilters'
 import ActiveFilters from '@/components/ActiveFilters'
@@ -20,7 +27,9 @@ export default async function MapPage({
 }) {
   const sp = await searchParams
 
-  const { FILTER_FIELDS, DATE_FILTER_FIELD, MULTISELECT_FILTER_FIELDS } = await getDocumentConfig()
+  const { FILTER_FIELDS, DATE_FILTER_FIELD, MULTISELECT_FILTER_FIELDS, FIELDS } = await getDocumentConfig()
+  const CONTAINER_FILTER_LABEL = requireField(FIELDS, 'container-ref', 'document_field_config').label
+  const CONTAINER_PARAM_KEY = 'container'
 
   const date_from = (sp.date_from as string | undefined) ?? undefined
   const date_to = (sp.date_to as string | undefined) ?? undefined
@@ -31,16 +40,19 @@ export default async function MapPage({
     const vals = normalise(sp[field.paramKey!])
     if (vals.length > 0) filters[field.paramKey!] = vals
   }
+  const containerIds = normalise(sp[CONTAINER_PARAM_KEY])
 
   // getGeocodedLocations is cached — fetch it first so we can restrict facet counts
   // to only documents that actually appear on the map.
   const geocodedLocations = await getGeocodedLocations()
   const locationRestriction = focus ? [focus] : geocodedLocations
 
-  const [pins, filterOptions, filterCounts] = await Promise.all([
-    getMapPins({ date_from, date_to, filters, locationFocus: focus }),
+  const [pins, filterOptions, filterCounts, containerOptions, containerCounts] = await Promise.all([
+    getMapPins({ date_from, date_to, filters, containerIds, locationFocus: focus }),
     getDocumentFilterOptions(),
-    getDocumentFacetCounts({ date_from, date_to, filters }, { locationRestriction }),
+    getDocumentFacetCounts({ date_from, date_to, filters, containerIds }, { locationRestriction }),
+    getContainerFilterOptions(),
+    getContainerFacetCounts({ date_from, date_to, filters, containerIds }),
   ])
 
   const docCount = pins.reduce((sum, p) => sum + p.documents.length, 0)
@@ -66,6 +78,12 @@ export default async function MapPage({
               filterCounts={filterCounts}
               basePath="/map"
               showKeywordSearch={false}
+              containerFilter={{
+                label: CONTAINER_FILTER_LABEL,
+                paramKey: CONTAINER_PARAM_KEY,
+                options: containerOptions,
+                counts: containerCounts,
+              }}
             />
           </Suspense>
         </div>
@@ -73,7 +91,14 @@ export default async function MapPage({
         {/* Map */}
         <div className="flex-1 min-w-0">
           <Suspense>
-            <ActiveFilters multiselectFields={MULTISELECT_FILTER_FIELDS} />
+            <ActiveFilters
+              multiselectFields={MULTISELECT_FILTER_FIELDS}
+              containerFilter={{
+                label: CONTAINER_FILTER_LABEL,
+                paramKey: CONTAINER_PARAM_KEY,
+                labels: Object.fromEntries(containerOptions.map((o) => [o.id, o.label])),
+              }}
+            />
           </Suspense>
           <div className="border border-border rounded overflow-hidden h-[500px] sm:h-[600px] isolate">
             <DocumentMap pins={pins} focus={focus} />

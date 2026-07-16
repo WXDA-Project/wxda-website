@@ -5,6 +5,25 @@ import { useState } from 'react'
 import type { FieldConfig } from '@/lib/config/db-config'
 import SearchHelpTooltip from './SearchHelpTooltip'
 
+// ── Include/exclude filter values ───────────────────────────────────────────
+// Each selected value is either included (plain string) or excluded (`!`-prefixed).
+// Include and exclude are two independent binary toggles per option, not a cycle.
+
+type FilterState = 'none' | 'include' | 'exclude'
+
+function stateFor(selected: string[], opt: string): FilterState {
+  if (selected.includes(opt)) return 'include'
+  if (selected.includes(`!${opt}`)) return 'exclude'
+  return 'none'
+}
+
+function withState(selected: string[], opt: string, state: FilterState): string[] {
+  const withoutOpt = selected.filter((v) => v !== opt && v !== `!${opt}`)
+  if (state === 'include') return [...withoutOpt, opt]
+  if (state === 'exclude') return [...withoutOpt, `!${opt}`]
+  return withoutOpt
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface FilterDraft {
@@ -82,20 +101,19 @@ function MultiselectGroup({
   onChange: (key: string, values: string[]) => void
 }) {
   const [open, setOpen] = useState(false)
-  const hasSelection = selected.length > 0
   const groupId = `fg-${paramKey}`
+  const includedCount = selected.filter((v) => !v.startsWith('!')).length
+  const excludedCount = selected.length - includedCount
 
-  function toggle(opt: string) {
-    const next = selected.includes(opt)
-      ? selected.filter((v) => v !== opt)
-      : [...selected, opt]
-    onChange(paramKey, next)
+  function toggleInclude(opt: string) {
+    const state = stateFor(selected, opt)
+    onChange(paramKey, withState(selected, opt, state === 'include' ? 'none' : 'include'))
   }
 
-  // When counts are available, hide options with zero count unless already selected
-  const visibleOptions = counts
-    ? options.filter((opt) => (counts[opt] ?? 0) > 0 || selected.includes(opt))
-    : options
+  function toggleExclude(opt: string) {
+    const state = stateFor(selected, opt)
+    onChange(paramKey, withState(selected, opt, state === 'exclude' ? 'none' : 'exclude'))
+  }
 
   return (
     <div className="border-b border-border">
@@ -108,12 +126,20 @@ function MultiselectGroup({
       >
         <span className="flex items-center gap-2">
           {label}
-          {hasSelection && (
+          {includedCount > 0 && (
             <span
               className="text-xs font-bold rounded-full px-1.5 py-0.5 leading-none bg-crimson text-on-accent"
-              aria-label={`${selected.length} selected`}
+              aria-label={`${includedCount} included`}
             >
-              {selected.length}
+              {includedCount}
+            </span>
+          )}
+          {excludedCount > 0 && (
+            <span
+              className="flex items-center gap-0.5 text-xs font-bold rounded-full px-1.5 py-0.5 leading-none bg-ink text-on-accent"
+              aria-label={`${excludedCount} excluded`}
+            >
+              <span aria-hidden="true">⊘</span>{excludedCount}
             </span>
           )}
         </span>
@@ -123,33 +149,54 @@ function MultiselectGroup({
       </button>
 
       {open && (
-        <ul id={groupId} className="pb-2 space-y-0.5" role="group" aria-label={label}>
-          {visibleOptions.map((opt) => {
-            const checked = selected.includes(opt)
+        <ul id={groupId} className="pb-2 space-y-0.5" aria-label={label}>
+          {options.map((opt) => {
+            const state = stateFor(selected, opt)
             const count = counts?.[opt] ?? 0
             const cbId = `cb-${paramKey}-${opt.replace(/[\s/()]+/g, '-')}`
+            const optLabel = optionLabels?.[opt] ?? opt
             return (
               <li key={opt}>
-                <label
-                  htmlFor={cbId}
-                  className={`flex items-center gap-2 text-sm cursor-pointer px-1 py-1 rounded transition-colors text-ink ${
-                    checked ? 'bg-tag-bg' : 'bg-transparent'
+                <div
+                  className={`group flex items-center gap-2 text-sm px-1 py-1 rounded transition-colors text-ink ${
+                    state !== 'none' ? 'bg-tag-bg' : 'bg-transparent'
                   }`}
                 >
-                  <input
-                    id={cbId}
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggle(opt)}
-                    className="mt-0.5 shrink-0 accent-crimson"
-                  />
-                  <span className="flex-1 min-w-0">{optionLabels?.[opt] ?? opt}</span>
+                  <label htmlFor={cbId} className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                    <input
+                      id={cbId}
+                      type="checkbox"
+                      checked={state === 'include'}
+                      onChange={() => toggleInclude(opt)}
+                      className="shrink-0 accent-crimson"
+                    />
+                    <span className={`flex-1 min-w-0 ${state === 'exclude' ? 'line-through text-muted' : ''}`}>
+                      {optLabel}
+                    </span>
+                    {state === 'exclude' && (
+                      <span className="text-xs text-muted shrink-0">(excluded)</span>
+                    )}
+                  </label>
                   {counts && (
                     <span className="text-xs text-muted tabular-nums shrink-0">
                       {count.toLocaleString()}
                     </span>
                   )}
-                </label>
+                  <button
+                    type="button"
+                    aria-pressed={state === 'exclude'}
+                    aria-label={state === 'exclude' ? `Remove exclude filter for ${optLabel}` : `Exclude ${optLabel}`}
+                    title={state === 'exclude' ? 'Excluded — click to clear' : 'Click to exclude'}
+                    onClick={() => toggleExclude(opt)}
+                    className={`shrink-0 flex items-center justify-center w-5 h-5 rounded text-xs leading-none border transition-opacity cursor-pointer ${
+                      state === 'exclude'
+                        ? 'opacity-100 bg-ink border-ink text-on-accent'
+                        : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 border-border text-muted bg-paper'
+                    }`}
+                  >
+                    <span aria-hidden="true">⊘</span>
+                  </button>
+                </div>
               </li>
             )
           })}

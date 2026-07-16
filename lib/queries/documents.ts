@@ -2,6 +2,7 @@ import { cacheLife } from 'next/cache'
 import { supabase } from '../supabase'
 import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getPersonConfig, getContainerConfig, getRelationshipConfig } from '../config/db-config'
 import { PAGE_SIZE, DocumentRow, PersonSummary, ContainerSummary } from './types'
+import { splitFilterValues, excludeFilter } from '../search-utils'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -53,8 +54,9 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
   if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
 
   for (const field of MULTISELECT_FILTER_FIELDS) {
-    const values = params.filters?.[field.paramKey!] ?? []
-    if (values.length > 0) query = query.overlaps(field.key, values)
+    const { include, exclude } = splitFilterValues(params.filters?.[field.paramKey!] ?? [])
+    if (include.length > 0) query = query.overlaps(field.key, include)
+    if (exclude.length > 0) query = query.or(excludeFilter(field.key, exclude, 'ov'))
   }
 
   for (const field of TEXT_FILTER_FIELDS) {
@@ -63,7 +65,11 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     if (value) query = query.ilike(field.key, `%${value}%`)
   }
 
-  if (params.containerIds?.length) query = query.in(CONTAINER_FIELD_KEY, params.containerIds)
+  if (params.containerIds?.length) {
+    const { include, exclude } = splitFilterValues(params.containerIds)
+    if (include.length > 0) query = query.in(CONTAINER_FIELD_KEY, include)
+    if (exclude.length > 0) query = query.or(excludeFilter(CONTAINER_FIELD_KEY, exclude, 'in'))
+  }
 
   query = query.order(SORT_DATE_KEY, { ascending: true, nullsFirst: false }).range(from, to)
 
@@ -202,8 +208,9 @@ export async function searchDocumentDates(
   if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
 
   for (const field of MULTISELECT_FILTER_FIELDS) {
-    const values = params.filters?.[field.paramKey!] ?? []
-    if (values.length > 0) query = query.overlaps(field.key, values)
+    const { include, exclude } = splitFilterValues(params.filters?.[field.paramKey!] ?? [])
+    if (include.length > 0) query = query.overlaps(field.key, include)
+    if (exclude.length > 0) query = query.or(excludeFilter(field.key, exclude, 'ov'))
   }
 
   for (const field of TEXT_FILTER_FIELDS) {
@@ -212,7 +219,11 @@ export async function searchDocumentDates(
     if (value) query = query.ilike(field.key, `%${value}%`)
   }
 
-  if (params.containerIds?.length) query = query.in(CONTAINER_FIELD_KEY, params.containerIds)
+  if (params.containerIds?.length) {
+    const { include, exclude } = splitFilterValues(params.containerIds)
+    if (include.length > 0) query = query.in(CONTAINER_FIELD_KEY, include)
+    if (exclude.length > 0) query = query.or(excludeFilter(CONTAINER_FIELD_KEY, exclude, 'in'))
+  }
 
   const { data } = await query
   return (data as unknown as Record<string, string | null>[] ?? []).map((d) => d[SORT_DATE_KEY])

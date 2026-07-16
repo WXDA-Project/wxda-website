@@ -34,22 +34,31 @@ export default function ActiveFilters({ multiselectFields, textFilterFields = []
     pills.push({ label: `Date: ${from} – ${to}`, removeKey: 'date' })
   }
   for (const field of multiselectFields) {
-    searchParams.getAll(field.paramKey!).forEach((v) =>
-      pills.push({ label: `${field.label}: ${v}`, removeKey: field.paramKey!, removeValue: v }),
-    )
+    searchParams.getAll(field.paramKey!).forEach((v) => {
+      const excluded = v.startsWith('!')
+      const display = excluded ? v.slice(1) : v
+      pills.push({
+        label: excluded ? `${field.label}: NOT ${display}` : `${field.label}: ${display}`,
+        removeKey: field.paramKey!,
+        removeValue: v,
+      })
+    })
   }
   for (const field of textFilterFields) {
     const v = searchParams.get(field.paramKey!)
     if (v) pills.push({ label: `${field.label}: "${v}"`, removeKey: field.paramKey! })
   }
   if (containerFilter) {
-    searchParams.getAll(containerFilter.paramKey).forEach((v) =>
+    searchParams.getAll(containerFilter.paramKey).forEach((v) => {
+      const excluded = v.startsWith('!')
+      const rawId = excluded ? v.slice(1) : v
+      const display = containerFilter.labels[rawId] ?? rawId
       pills.push({
-        label: `${containerFilter.label}: ${containerFilter.labels[v] ?? v}`,
+        label: excluded ? `${containerFilter.label}: NOT ${display}` : `${containerFilter.label}: ${display}`,
         removeKey: containerFilter.paramKey,
         removeValue: v,
-      }),
-    )
+      })
+    })
   }
 
   if (pills.length === 0) return null

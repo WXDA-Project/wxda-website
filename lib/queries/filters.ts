@@ -4,6 +4,7 @@ import { FTS_COLUMN, VISIBILITY_COLUMN, getDocumentConfig, getContainerConfig, g
 import { containerDisplayName, type ContainerSummary } from './types'
 import type { SearchParams } from './documents'
 import type { PersonSearchParams } from './persons'
+import { splitFilterValues, excludeFilter } from '../search-utils'
 
 async function fetchFilterOptions(
   table: 'documents' | 'persons',
@@ -66,13 +67,13 @@ function countFieldValues(
 }
 
 export async function getDocumentFacetCounts(
-  params: Pick<SearchParams, 'q' | 'date_from' | 'date_to' | 'filters'>,
+  params: Pick<SearchParams, 'q' | 'date_from' | 'date_to' | 'filters' | 'containerIds'>,
   options?: {
     /** When provided, only count documents whose location field overlaps this set (e.g. geocoded locations for the map). */
     locationRestriction?: string[]
   },
 ): Promise<FacetCounts> {
-  const { MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY, LOCATION_FIELD_KEY } = await getDocumentConfig()
+  const { MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY, LOCATION_FIELD_KEY, CONTAINER_FIELD_KEY } = await getDocumentConfig()
 
   const results = await Promise.all(
     MULTISELECT_FILTER_FIELDS.map(async (field) => {
@@ -89,10 +90,20 @@ export async function getDocumentFacetCounts(
       if (options?.locationRestriction?.length)
         query = query.overlaps(LOCATION_FIELD_KEY, options.locationRestriction)
 
+      if (params.containerIds?.length) {
+        const { include, exclude } = splitFilterValues(params.containerIds)
+        if (include.length > 0) query = query.in(CONTAINER_FIELD_KEY, include)
+        if (exclude.length > 0) query = query.or(excludeFilter(CONTAINER_FIELD_KEY, exclude, 'in'))
+      }
+
       for (const other of MULTISELECT_FILTER_FIELDS) {
-        if (other.paramKey === field.paramKey) continue
-        const vals = params.filters?.[other.paramKey!] ?? []
-        if (vals.length > 0) query = query.overlaps(other.key, vals)
+        const { include, exclude } = splitFilterValues(params.filters?.[other.paramKey!] ?? [])
+        // Skip this field's own *include* selections so sibling checkbox counts show "if I
+        // also picked this" totals rather than collapsing to the current OR-selection. Excludes
+        // are subtractive rather than OR-widening, so a field's own excludes still apply to its
+        // own counts — otherwise excluding every option in a group would never move its numbers.
+        if (other.paramKey !== field.paramKey && include.length > 0) query = query.overlaps(other.key, include)
+        if (exclude.length > 0) query = query.or(excludeFilter(other.key, exclude, 'ov'))
       }
 
       const { data } = await query
@@ -120,12 +131,14 @@ export async function getPersonFacetCounts(
         query = query.textSearch(FTS_COLUMN, params.q.trim(), { type: 'websearch', config: 'simple' })
 
       for (const other of PERSON_MULTISELECT_FILTER_FIELDS) {
-        if (other.paramKey === field.paramKey) continue
-        const vals = params.filters?.[other.paramKey!] ?? []
-        if (vals.length > 0) {
-          query = other.isArray
-            ? query.overlaps(other.key, vals)
-            : query.in(other.key, vals)
+        const { include, exclude } = splitFilterValues(params.filters?.[other.paramKey!] ?? [])
+        const isSelf = other.paramKey === field.paramKey
+        if (other.isArray) {
+          if (!isSelf && include.length > 0) query = query.overlaps(other.key, include)
+          if (exclude.length > 0) query = query.or(excludeFilter(other.key, exclude, 'ov'))
+        } else {
+          if (!isSelf && include.length > 0) query = query.in(other.key, include)
+          if (exclude.length > 0) query = query.or(excludeFilter(other.key, exclude, 'in'))
         }
       }
 
@@ -179,7 +192,7 @@ export async function getContainerFilterOptions(): Promise<ContainerFilterOption
 }
 
 export async function getContainerFacetCounts(
-  params: Pick<SearchParams, 'q' | 'date_from' | 'date_to' | 'filters'>,
+  params: Pick<SearchParams, 'q' | 'date_from' | 'date_to' | 'filters' | 'containerIds'>,
 ): Promise<Record<string, number>> {
   const { MULTISELECT_FILTER_FIELDS, SORT_DATE_KEY, CONTAINER_FIELD_KEY } = await getDocumentConfig()
 
@@ -194,9 +207,17 @@ export async function getContainerFacetCounts(
   if (params.date_from) query = query.gte(SORT_DATE_KEY, params.date_from)
   if (params.date_to)   query = query.lte(SORT_DATE_KEY, params.date_to)
 
+  // Own excludes still narrow sibling container counts (subtractive); own includes are skipped
+  // so picking one container doesn't zero out the others' counts.
+  if (params.containerIds?.length) {
+    const { exclude } = splitFilterValues(params.containerIds)
+    if (exclude.length > 0) query = query.or(excludeFilter(CONTAINER_FIELD_KEY, exclude, 'in'))
+  }
+
   for (const field of MULTISELECT_FILTER_FIELDS) {
-    const vals = params.filters?.[field.paramKey!] ?? []
-    if (vals.length > 0) query = query.overlaps(field.key, vals)
+    const { include, exclude } = splitFilterValues(params.filters?.[field.paramKey!] ?? [])
+    if (include.length > 0) query = query.overlaps(field.key, include)
+    if (exclude.length > 0) query = query.or(excludeFilter(field.key, exclude, 'ov'))
   }
 
   const { data } = await query
