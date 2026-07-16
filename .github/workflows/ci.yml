@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
 
 # Cancel in-progress runs for the same ref so a new push to a PR doesn't
 # queue behind the previous one.
@@ -68,14 +69,16 @@ jobs:
 
   # ── E2E tests (Playwright + local Supabase) ────────────────────────────────
   #
-  # Only runs on pull requests — heavy Docker setup is not worth the cost on
-  # every push to master. The unit, lint, and typecheck jobs still run on both.
+  # Only runs on pull requests or manual dispatch — heavy Docker setup is not
+  # worth the cost on every push to master. The unit, lint, and typecheck jobs
+  # still run on both. Trigger manually via the Actions tab's "Run workflow"
+  # button, or `gh workflow run ci.yml`.
   #
   # Playwright Chromium binary is cached on package-lock.json. On a cache hit
   # only the OS system deps (fast apt install) need to run.
   e2e:
     name: E2E tests
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
