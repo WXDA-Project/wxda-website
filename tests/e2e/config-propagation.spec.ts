@@ -10,7 +10,7 @@
  * Parallel execution would cause those tests to interfere with each other.
  */
 
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 const TEST_EMAIL    = 'admin@test.local'
 const TEST_PASSWORD = 'TestPassword123!'
@@ -21,7 +21,7 @@ function esc(s: string) {
 }
 
 /** Returns a locator that finds a tbody row whose Label column (3rd td) exactly matches `label`. */
-function rowByLabel(page: import('@playwright/test').Page, label: string) {
+function rowByLabel(page: Page, label: string) {
   return page.locator('tbody tr').filter({
     has: page.locator('td:nth-child(3)').filter({ hasText: new RegExp(`^${esc(label)}$`) }),
   }).first()
@@ -39,7 +39,7 @@ test.describe('Config propagation', () => {
    * changes to /admin/fields before the table data is ready. Without this
    * explicit wait the test can interact with a not-yet-populated skeleton.
    */
-  async function login(page: import('@playwright/test').Page) {
+  async function login(page: Page) {
     await page.goto('/admin/login')
     await page.getByLabel('Email').fill(TEST_EMAIL)
     await page.getByLabel('Password').fill(TEST_PASSWORD)
@@ -54,7 +54,7 @@ test.describe('Config propagation', () => {
    * unnecessary and fragile — a direct goto is enough. Re-login only if the
    * session somehow expired (redirect to /admin/login).
    */
-  async function goToAdmin(page: import('@playwright/test').Page, tab?: string) {
+  async function goToAdmin(page: Page, tab?: string) {
     const url = tab ? `/admin/fields?tab=${tab}` : '/admin/fields'
     await page.goto(url)
     if (page.url().includes('/admin/login')) {
@@ -69,7 +69,7 @@ test.describe('Config propagation', () => {
    * enabled (✓ in the 5th column). Used by person-tab tests to discover which
    * field to target without hardcoding a label.
    */
-  function firstVisibleRow(page: import('@playwright/test').Page) {
+  function firstVisibleRow(page: Page) {
     return page.locator('tbody tr').filter({
       has: page.locator('td:nth-child(5)', { hasText: '✓' }),
     }).first()

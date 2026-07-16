@@ -11,6 +11,12 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
+  // Next.js dev mode JIT-compiles each route on its first visit — routes that
+  // pull in the MDXEditor bundle (blog/advisory-board/page-content admin
+  // forms) can take longer than the 5s default on a cold compile.
+  expect: {
+    timeout: 10_000,
+  },
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',

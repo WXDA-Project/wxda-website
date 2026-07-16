@@ -53,7 +53,7 @@ npm run test:watch    # watch mode
 npm run test:coverage # with coverage report
 ```
 
-Unit tests live in `tests/unit/`. Covers display helper functions in `lib/queries/types.ts` and search utilities in `lib/search-utils.ts`.
+Unit tests live in `tests/unit/`. Covers display helper functions in `lib/queries/types.ts`, search utilities in `lib/search-utils.ts`, and a rendering regression guard for the shared ReactMarkdown + rehype-raw pipeline (raw HTML support).
 
 ### E2E tests (Playwright)
 
@@ -71,6 +71,8 @@ E2E tests live in `tests/e2e/`:
 | `public.spec.ts` | Home page, search (URL params, clear), map, record detail, persons search and detail, 404 |
 | `admin.spec.ts` | Auth redirect, login form, invalid credentials, tab switching, edit dialog |
 | `config-propagation.spec.ts` | Full round-trip: admin field change → cache invalidation → public page reflects change |
+| `admin-content.spec.ts` | News/advisory-board/blog CRUD and page-content editing → propagation to public pages; draft vs. published blog visibility |
+| `public-content.spec.ts` | Advisory board, news, and blog smoke tests; blog 404 for unpublished/unknown slugs; container filter round-trip on `/search` |
 
 #### Config propagation tests
 
@@ -229,12 +231,15 @@ wxda-website/
 ├── tests/
 │   ├── unit/
 │   │   ├── display-helpers.test.ts  # Jest unit tests for display helper functions
-│   │   └── search-utils.test.ts     # Jest unit tests for search utilities
+│   │   ├── search-utils.test.ts     # Jest unit tests for search utilities
+│   │   └── markdown-rendering.test.tsx # Raw-HTML rendering regression guard (ReactMarkdown + rehype-raw)
 │   └── e2e/
 │       ├── public.spec.ts           # Playwright: home, search, map, 404
 │       ├── admin.spec.ts            # Playwright: auth guard, login, field editor UI
-│       └── config-propagation.spec.ts # Playwright: admin change → public page reflects it
-├── jest.config.ts              # Jest config (Next.js SWC transform, node environment)
+│       ├── config-propagation.spec.ts # Playwright: admin change → public page reflects it
+│       ├── admin-content.spec.ts    # Playwright: news/advisory-board/blog/page-content admin CRUD
+│       └── public-content.spec.ts   # Playwright: advisory board/news/blog smoke tests, container filter
+├── jest.config.mjs              # Jest config (Next.js SWC transform + ESM transform allowlist for react-markdown)
 ├── playwright.config.ts        # Playwright config (baseURL, webServer auto-start)
 └── public/                     # Static assets
 ```

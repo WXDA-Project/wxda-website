@@ -16,9 +16,9 @@ test.describe('Home page', () => {
     await expect(page).toHaveURL(/\/search\?.*q=cross-dressing/)
   })
 
-  test('"browse all records" link goes to /search', async ({ page }) => {
+  test('"Browse the archive" link goes to /search', async ({ page }) => {
     await page.goto('/')
-    await page.getByRole('link', { name: /browse all records/i }).click()
+    await page.getByRole('link', { name: /browse the archive/i }).click()
     await expect(page).toHaveURL('/search')
   })
 })
